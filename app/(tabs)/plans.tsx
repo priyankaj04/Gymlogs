@@ -1,18 +1,22 @@
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import {
+  AnimatedBadge,
+  AnimatedButton,
+  AnimatedCard,
+  FadeInView,
+  SlideInView
+} from '@/components/ui/AnimatedComponents';
+import { BorderRadius, Colors, Layout, Spacing } from '@/constants/theme';
+import { Typography } from '@/constants/Typography';
 import { WorkoutPlan } from '@/types/gym';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 
 // Mock data for workout plans
@@ -66,8 +70,6 @@ const mockWorkoutPlans: WorkoutPlan[] = [
 export default function WorkoutPlansScreen() {
   const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>(mockWorkoutPlans);
   const [searchQuery, setSearchQuery] = useState('');
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
 
   const filteredPlans = workoutPlans.filter((plan) => {
     return (
@@ -102,87 +104,102 @@ export default function WorkoutPlansScreen() {
     }
   };
 
-  const renderWorkoutPlanItem = ({ item }: { item: WorkoutPlan }) => (
-    <TouchableOpacity
-      style={[styles.planCard, { backgroundColor: colors.card }]}
-      onPress={() => handlePlanPress(item.id)}
-    >
-      <View style={styles.planHeader}>
-        <View style={styles.planInfo}>
-          <ThemedText style={styles.planName}>{item.name}</ThemedText>
-          {item.description && (
-            <ThemedText style={styles.planDescription} numberOfLines={2}>
-              {item.description}
-            </ThemedText>
-          )}
-          
-          <View style={styles.planMetrics}>
-            {item.estimatedDuration && (
-              <View style={styles.metricItem}>
-                <Ionicons name="time-outline" size={16} color={colors.icon} />
-                <Text style={[styles.metricText, { color: colors.icon }]}>
-                  {item.estimatedDuration} min
-                </Text>
-              </View>
+  const renderWorkoutPlanItem = ({ item, index }: { item: WorkoutPlan; index: number }) => (
+    <FadeInView delay={index * 100}>
+      <AnimatedCard
+        onPress={() => handlePlanPress(item.id)}
+        style={styles.planCard}
+        elevation="md"
+        padding="lg"
+      >
+        <View style={styles.planHeader}>
+          <View style={styles.planInfo}>
+            <Text style={Typography.h5}>{item.name}</Text>
+            {item.description && (
+              <Text style={[Typography.description, { marginTop: Spacing.xs }]} numberOfLines={2}>
+                {item.description}
+              </Text>
             )}
             
-            <View style={styles.metricItem}>
-              <Ionicons name="fitness-outline" size={16} color={colors.icon} />
-              <Text style={[styles.metricText, { color: colors.icon }]}>
-                {item.exercises.length} exercises
-              </Text>
+            <View style={styles.planMetrics}>
+              {item.estimatedDuration && (
+                <View style={styles.metricItem}>
+                  <Ionicons name="time-outline" size={16} color={Colors.gray500} />
+                  <Text style={[Typography.caption, { color: Colors.gray500 }]}>
+                    {item.estimatedDuration} min
+                  </Text>
+                </View>
+              )}
+              
+              <View style={styles.metricItem}>
+                <Ionicons name="fitness-outline" size={16} color={Colors.gray500} />
+                <Text style={[Typography.caption, { color: Colors.gray500 }]}>
+                  {item.exercises.length} exercises
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.badgeContainer}>
+              {item.difficulty && (
+                <AnimatedBadge
+                  text={item.difficulty}
+                  variant={item.difficulty === 'beginner' ? 'success' : item.difficulty === 'intermediate' ? 'warning' : 'error'}
+                  size="small"
+                />
+              )}
+              {item.tags?.map((tag, index) => (
+                <AnimatedBadge
+                  key={index}
+                  text={tag}
+                  variant="secondary"
+                  size="small"
+                />
+              ))}
             </View>
           </View>
-
-          <View style={styles.badgeContainer}>
-            {item.difficulty && (
-              <View style={[styles.badge, { backgroundColor: getDifficultyColor(item.difficulty) }]}>
-                <Text style={styles.badgeText}>{item.difficulty}</Text>
-              </View>
-            )}
-            {item.tags?.map((tag, index) => (
-              <View key={index} style={[styles.badge, styles.tagBadge]}>
-                <Text style={styles.badgeText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
+          
+          <AnimatedCard
+            onPress={() => handleEditPress(item.id)}
+            style={styles.editButton}
+            elevation="sm"
+            padding="sm"
+          >
+            <Ionicons name="pencil" size={18} color={Colors.primary} />
+          </AnimatedCard>
         </View>
-        
-        <TouchableOpacity
-          onPress={() => handleEditPress(item.id)}
-          style={styles.editButton}
-        >
-          <Ionicons name="pencil" size={20} color={colors.tint} />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+      </AnimatedCard>
+    </FadeInView>
   );
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText style={styles.title}>Workout Plans</ThemedText>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: colors.tint }]}
+    <View style={styles.container}>
+      {/* Header */}
+      <FadeInView style={styles.header}>
+        <Text style={Typography.h3}>Workout Plans</Text>
+        <AnimatedButton
+          title="Add"
           onPress={handleAddPress}
-        >
-          <Ionicons name="add" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
+          variant="primary"
+          size="medium"
+          style={styles.addButton}
+        />
+      </FadeInView>
 
-      <View style={styles.searchContainer}>
-        <View style={[styles.searchInput, { borderColor: colors.border }]}>
-          <Ionicons name="search" size={20} color={colors.icon} />
+      {/* Search Bar */}
+      <SlideInView delay={100} style={styles.searchContainer}>
+        <View style={styles.searchInput}>
+          <Ionicons name="search" size={20} color={Colors.gray400} />
           <TextInput
-            style={[styles.textInput, { color: colors.text }]}
+            style={styles.textInput}
             placeholder="Search workout plans..."
-            placeholderTextColor={colors.tabIconDefault}
+            placeholderTextColor={Colors.gray400}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
         </View>
-      </View>
+      </SlideInView>
 
+      {/* Workout Plans List */}
       <FlatList
         data={filteredPlans}
         keyExtractor={(item) => item.id}
@@ -190,63 +207,55 @@ export default function WorkoutPlansScreen() {
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
       />
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    backgroundColor: Colors.background,
+    paddingTop: Layout.screenPadding * 2,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    paddingHorizontal: Layout.screenPadding,
+    marginBottom: Spacing.xl,
   },
   addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    minWidth: 80,
   },
   searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: Layout.screenPadding,
+    marginBottom: Spacing.lg,
   },
   searchInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: Colors.gray50,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderRadius: 12,
-    gap: 8,
+    borderColor: Colors.gray200,
+    gap: Spacing.sm,
   },
   textInput: {
     flex: 1,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textPrimary,
   },
   listContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: Layout.screenPadding,
+    paddingBottom: Spacing['4xl'],
+    gap: Spacing.md,
   },
   planCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    marginBottom: Spacing.md,
+    minHeight: 140,
   },
   planHeader: {
     flexDirection: 'row',
@@ -256,50 +265,28 @@ const styles = StyleSheet.create({
   planInfo: {
     flex: 1,
   },
-  planName: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  planDescription: {
-    fontSize: 14,
-    opacity: 0.7,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
   planMetrics: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 12,
+    gap: Spacing.lg,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.md,
   },
   metricItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  metricText: {
-    fontSize: 14,
+    gap: Spacing.xs,
   },
   badgeContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  tagBadge: {
-    backgroundColor: '#6366F1',
-  },
-  badgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '500',
-    textTransform: 'capitalize',
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
   },
   editButton: {
-    padding: 8,
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

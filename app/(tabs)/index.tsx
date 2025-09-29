@@ -1,16 +1,20 @@
-import FontTest from "@/components/FontTest";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { Colors, Typography } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import {
+  AnimatedBadge,
+  AnimatedCard,
+  FadeInView,
+  SlideInView
+} from "@/components/ui/AnimatedComponents";
+import { BorderRadius, Colors, Layout, Shadows, Spacing } from "@/constants/theme";
+import { Typography } from "@/constants/Typography";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Animated, Dimensions, StyleSheet, Text, View } from "react-native";
+
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const scrollY = React.useRef(new Animated.Value(0)).current;
 
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -23,6 +27,9 @@ export default function HomeScreen() {
       case "view-plans":
         router.push("/plans");
         break;
+      case "view-stats":
+        // TODO: Navigate to stats page when created
+        break;
     }
   };
 
@@ -31,301 +38,305 @@ export default function HomeScreen() {
       id: "start-workout",
       title: "Start Today's Workout",
       subtitle: "Push Day - 60 min",
-      icon: "play-circle",
-      color: colors.tint,
+      icon: "play-circle" as const,
+      color: Colors.primary,
+      gradient: [Colors.primary, Colors.primaryDark],
     },
     {
       id: "add-exercise",
       title: "Add Exercise",
       subtitle: "Create new exercise",
-      icon: "add-circle",
-      color: "#10B981",
+      icon: "add-circle" as const,
+      color: Colors.success,
+      gradient: [Colors.success, '#388E3C'],
     },
     {
       id: "view-plans",
       title: "Workout Plans",
       subtitle: "4 plans created",
-      icon: "list",
-      color: "#6366F1",
+      icon: "list" as const,
+      color: Colors.info,
+      gradient: [Colors.info, '#1976D2'],
     },
     {
       id: "view-stats",
       title: "View Progress",
       subtitle: "Check your stats",
-      icon: "stats-chart",
-      color: "#F59E0B",
+      icon: "stats-chart" as const,
+      color: Colors.warning,
+      gradient: [Colors.warning, '#F57C00'],
     },
   ];
 
   const stats = [
-    { label: "Total Exercises", value: "24", icon: "fitness" },
-    { label: "Workout Plans", value: "4", icon: "list-circle" },
-    { label: "This Week", value: "3/5", icon: "calendar" },
-    { label: "Streak", value: "7 days", icon: "flame" },
+    { label: "Total Exercises", value: "24", icon: "fitness", change: "+3" },
+    { label: "Workout Plans", value: "4", icon: "list-circle", change: "+1" },
+    { label: "This Week", value: "3/5", icon: "calendar", change: "60%" },
+    { label: "Current Streak", value: "7 days", icon: "flame", change: "🔥" },
+  ];
+
+  const recentActivities = [
+    {
+      title: "Completed Push Day",
+      subtitle: "60 min workout • 8 exercises",
+      time: "Yesterday, 6:30 PM",
+      icon: "checkmark-circle",
+      color: Colors.success,
+    },
+    {
+      title: "Added new exercise",
+      subtitle: "Incline Dumbbell Press",
+      time: "2 days ago",
+      icon: "add-circle",
+      color: Colors.primary,
+    },
+    {
+      title: "Created Pull Day plan",
+      subtitle: "12 exercises added",
+      time: "3 days ago",
+      icon: "create",
+      color: Colors.info,
+    },
   ];
 
   return (
-    <>
-      <ThemedView style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
+    <View style={styles.container}>
+      <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
+        {/* Header Section */}
+        <FadeInView style={styles.header}>
+          <View style={styles.headerContent}>
             <View>
-              <Text style={[Typography.h1, { color: Colors.dark.text }]}>
-                Gym Logs App
+              <Text style={Typography.h2}>Good morning! 👋</Text>
+              <Text style={[Typography.body, { marginTop: Spacing.xs }]}>
+                Ready to crush your workout?
               </Text>
-
-              <ThemedText style={styles.greeting}>Good morning!</ThemedText>
-              <ThemedText style={styles.subtitle}>
-                Ready for your workout?
-              </ThemedText>
             </View>
             <View style={styles.profileIcon}>
-              <Ionicons name="person-circle" size={40} color={colors.icon} />
+              <Ionicons name="person-circle" size={44} color={Colors.gray400} />
             </View>
           </View>
+        </FadeInView>
 
-          <View style={styles.statsContainer}>
-            <ThemedText style={styles.sectionTitle}>Overview</ThemedText>
-            <View style={styles.statsGrid}>
-              {stats.map((stat, index) => (
-                <View
-                  key={index}
-                  style={[styles.statCard, { backgroundColor: colors.card }]}
+        {/* Stats Overview */}
+        <SlideInView delay={200} style={styles.section}>
+          <Text style={[Typography.h4, { marginBottom: Spacing.lg }]}>
+            Your Progress
+          </Text>
+          <View style={styles.statsGrid}>
+            {stats.map((stat, index) => (
+              <FadeInView key={index} delay={300 + index * 100}>
+                <AnimatedCard 
+                  style={styles.statCard}
+                  elevation="md"
+                  padding="lg"
                 >
-                  <Ionicons
-                    name={stat.icon as any}
-                    size={24}
-                    color={colors.tint}
-                  />
-                  <ThemedText style={styles.statValue}>{stat.value}</ThemedText>
-                  <ThemedText style={styles.statLabel}>{stat.label}</ThemedText>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.quickActionsContainer}>
-            <ThemedText style={styles.sectionTitle}>Quick Actions</ThemedText>
-            <View style={styles.actionsGrid}>
-              {quickActions.map((action) => (
-                <TouchableOpacity
-                  key={action.id}
-                  style={[styles.actionCard, { backgroundColor: colors.card }]}
-                  onPress={() => handleQuickAction(action.id)}
-                >
-                  <View
-                    style={[
-                      styles.actionIcon,
-                      { backgroundColor: action.color },
-                    ]}
-                  >
+                  <View style={styles.statIconContainer}>
                     <Ionicons
-                      name={action.icon as any}
+                      name={stat.icon as any}
                       size={24}
-                      color="white"
+                      color={Colors.primary}
+                    />
+                    <AnimatedBadge
+                      text={stat.change}
+                      variant="primary"
+                      size="small"
+                      style={styles.statBadge}
                     />
                   </View>
-                  <View style={styles.actionContent}>
-                    <ThemedText style={styles.actionTitle}>
-                      {action.title}
-                    </ThemedText>
-                    <ThemedText style={styles.actionSubtitle}>
-                      {action.subtitle}
-                    </ThemedText>
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={colors.icon}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
+                  <Text style={[Typography.h3, { marginTop: Spacing.sm }]}>
+                    {stat.value}
+                  </Text>
+                  <Text style={[Typography.caption, { marginTop: Spacing.xs }]}>
+                    {stat.label}
+                  </Text>
+                </AnimatedCard>
+              </FadeInView>
+            ))}
           </View>
-          <FontTest />
+        </SlideInView>
 
-          <View style={styles.recentActivity}>
-            <ThemedText style={styles.sectionTitle}>Recent Activity</ThemedText>
-            <View
-              style={[styles.activityCard, { backgroundColor: colors.card }]}
-            >
-              <View style={styles.activityItem}>
-                <View
-                  style={[
-                    styles.activityIcon,
-                    { backgroundColor: colors.tint },
-                  ]}
+        {/* Quick Actions */}
+        <SlideInView delay={400} style={styles.section}>
+          <Text style={[Typography.h4, { marginBottom: Spacing.lg }]}>
+            Quick Actions
+          </Text>
+          <View style={styles.actionsGrid}>
+            {quickActions.map((action, index) => (
+              <FadeInView key={action.id} delay={500 + index * 100}>
+                <AnimatedCard
+                  onPress={() => handleQuickAction(action.id)}
+                  style={styles.actionCard}
+                  elevation="lg"
+                  padding="lg"
                 >
-                  <Ionicons name="checkmark" size={16} color="white" />
-                </View>
-                <View style={styles.activityContent}>
-                  <ThemedText style={styles.activityTitle}>
-                    Completed Push Day
-                  </ThemedText>
-                  <ThemedText style={styles.activityTime}>
-                    Yesterday, 6:30 PM
-                  </ThemedText>
-                </View>
-              </View>
-              <View style={styles.activityItem}>
-                <View
-                  style={[styles.activityIcon, { backgroundColor: "#10B981" }]}
-                >
-                  <Ionicons name="add" size={16} color="white" />
-                </View>
-                <View style={styles.activityContent}>
-                  <ThemedText style={styles.activityTitle}>
-                    Added new exercise
-                  </ThemedText>
-                  <ThemedText style={styles.activityTime}>
-                    2 days ago
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
+                  <View style={styles.actionContent}>
+                    <View
+                      style={[
+                        styles.actionIcon,
+                        { backgroundColor: action.color },
+                      ]}
+                    >
+                      <Ionicons
+                        name={action.icon}
+                        size={24}
+                        color={Colors.white}
+                      />
+                    </View>
+                    <View style={styles.actionText}>
+                      <Text style={Typography.h6}>{action.title}</Text>
+                      <Text style={[Typography.caption, { marginTop: Spacing.xs }]}>
+                        {action.subtitle}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color={Colors.gray400}
+                    />
+                  </View>
+                </AnimatedCard>
+              </FadeInView>
+            ))}
           </View>
-        </ScrollView>
-      </ThemedView>
-    </>
+        </SlideInView>
+
+        {/* Recent Activity */}
+        <SlideInView delay={600} style={styles.section}>
+          <Text style={[Typography.h4, { marginBottom: Spacing.lg }]}>
+            Recent Activity
+          </Text>
+          <AnimatedCard elevation="md" padding="lg">
+            {recentActivities.map((activity, index) => (
+              <FadeInView key={index} delay={700 + index * 100}>
+                <View style={[styles.activityItem, index < recentActivities.length - 1 && styles.activityItemBorder]}>
+                  <View
+                    style={[
+                      styles.activityIcon,
+                      { backgroundColor: activity.color },
+                    ]}
+                  >
+                    <Ionicons name={activity.icon as any} size={16} color={Colors.white} />
+                  </View>
+                  <View style={styles.activityContent}>
+                    <Text style={Typography.label}>{activity.title}</Text>
+                    <Text style={[Typography.caption, { marginTop: 2 }]}>
+                      {activity.subtitle}
+                    </Text>
+                    <Text style={[Typography.caption, { 
+                      marginTop: Spacing.xs, 
+                      color: Colors.textTertiary 
+                    }]}>
+                      {activity.time}
+                    </Text>
+                  </View>
+                </View>
+              </FadeInView>
+            ))}
+          </AnimatedCard>
+        </SlideInView>
+      </Animated.ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    backgroundColor: Colors.background,
+    paddingTop: Layout.screenPadding * 2,
   },
   header: {
+    paddingHorizontal: Layout.screenPadding,
+    marginBottom: Spacing['2xl'],
+  },
+  headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  greeting: {
-    fontSize: 28,
-    fontWeight: "bold",
-  },
-  subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
-    marginTop: 4,
+    alignItems: "flex-start",
   },
   profileIcon: {
     alignItems: "center",
     justifyContent: "center",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.gray100,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 16,
-  },
-  statsContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
+  section: {
+    paddingHorizontal: Layout.screenPadding,
+    marginBottom: Spacing['2xl'],
   },
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: Spacing.md,
+    justifyContent: "space-between",
   },
   statCard: {
     flex: 1,
-    minWidth: "45%",
-    padding: 16,
-    borderRadius: 12,
+    minWidth: (width - Layout.screenPadding * 2 - Spacing.md) / 2 - Spacing.md,
+    maxWidth: (width - Layout.screenPadding * 2 - Spacing.md) / 2,
     alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    minHeight: 120,
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 8,
-  },
-  statLabel: {
-    fontSize: 12,
-    opacity: 0.7,
-    textAlign: "center",
-    marginTop: 4,
-  },
-  quickActionsContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  actionsGrid: {
-    gap: 12,
-  },
-  actionCard: {
+  statIconContainer: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  statBadge: {
+    marginLeft: Spacing.sm,
+  },
+  actionsGrid: {
+    gap: Spacing.md,
+  },
+  actionCard: {
+    minHeight: 80,
+  },
+  actionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
   actionIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: BorderRadius.md,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 16,
+    marginRight: Spacing.lg,
+    ...Shadows.sm,
   },
-  actionContent: {
+  actionText: {
     flex: 1,
-  },
-  actionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  actionSubtitle: {
-    fontSize: 14,
-    opacity: 0.7,
-    marginTop: 2,
-  },
-  recentActivity: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  activityCard: {
-    padding: 16,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   activityItem: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    paddingVertical: Spacing.md,
+  },
+  activityItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.gray200,
   },
   activityIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.lg,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: Spacing.md,
+    marginTop: 2,
   },
   activityContent: {
     flex: 1,
-  },
-  activityTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  activityTime: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginTop: 2,
   },
 });

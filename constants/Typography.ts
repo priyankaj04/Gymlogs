@@ -1,8 +1,9 @@
 import { StyleSheet } from 'react-native';
 import { Fonts, FontSizes, LineHeights } from './Fonts';
+import { Colors } from './theme';
 
 /**
- * Typography Styles for Gym Logs App
+ * Typography Styles for Gym Logs App with Integrated Theme Colors
  * 
  * Usage Examples:
  * <Text style={Typography.h1}>Main Title</Text>
@@ -11,42 +12,48 @@ import { Fonts, FontSizes, LineHeights } from './Fonts';
  */
 
 export const Typography = StyleSheet.create({
-  // HEADINGS (Using Poppins)
+  // HEADINGS (Using Poppins with theme colors)
   h1: {
-    fontFamily: Fonts.heading,
+    fontFamily: 'Montserrat_700Bold',
     fontSize: FontSizes['5xl'],
     lineHeight: LineHeights['5xl'],
     fontWeight: '700',
+    color: Colors?.textPrimary
   },
   h2: {
-    fontFamily: Fonts.heading,
+    fontFamily: 'Montserrat_700Bold',
     fontSize: FontSizes['4xl'],
     lineHeight: LineHeights['4xl'],
     fontWeight: '700',
+    color: Colors?.textPrimary
   },
   h3: {
-    fontFamily: Fonts.headingMedium,
+    fontFamily: 'Montserrat_600SemiBold',
     fontSize: FontSizes['3xl'],
     lineHeight: LineHeights['3xl'],
     fontWeight: '600',
+    color: Colors?.textPrimary
   },
   h4: {
-    fontFamily: Fonts.headingMedium,
+    fontFamily: 'Montserrat_600SemiBold',
     fontSize: FontSizes['2xl'],
     lineHeight: LineHeights['2xl'],
     fontWeight: '600',
+    color: Colors?.textPrimary
   },
   h5: {
-    fontFamily: Fonts.headingLight,
+    fontFamily: 'Montserrat_500Medium',
     fontSize: FontSizes.xl,
     lineHeight: LineHeights.xl,
     fontWeight: '500',
+    color: Colors?.textPrimary
   },
   h6: {
-    fontFamily: Fonts.headingLight,
+    fontFamily: 'Montserrat_500Medium',
     fontSize: FontSizes.lg,
     lineHeight: LineHeights.lg,
     fontWeight: '500',
+    color: Colors?.textPrimary
   },
 
   // GENERAL UI TEXT (Using Alan Sans)

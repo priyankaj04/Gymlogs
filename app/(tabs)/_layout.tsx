@@ -12,37 +12,43 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
+      tabBarActiveTintColor: Colors.primary,
+      tabBarInactiveTintColor: Colors.gray500,
+      tabBarStyle: {
+        backgroundColor: Colors.white,
+        borderTopColor: Colors.gray200,
+        height: 60,
+      },
+      headerShown: false,
+      tabBarButton: HapticTab,
       }}>
       <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
+      name="index"
+      options={{
+        title: 'Home',
+        tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+      }}
       />
       <Tabs.Screen
-        name="exercises"
-        options={{
-          title: 'Exercises',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="figure.strengthtraining.traditional" color={color} />,
-        }}
+      name="exercises"
+      options={{
+        title: 'Exercises',
+        tabBarIcon: ({ color }) => <IconSymbol size={28} name="figure.strengthtraining.traditional" color={color} />,
+      }}
       />
       <Tabs.Screen
-        name="plans"
-        options={{
-          title: 'Plans',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="list.clipboard" color={color} />,
-        }}
+      name="plans"
+      options={{
+        title: 'Plans',
+        tabBarIcon: ({ color }) => <IconSymbol size={28} name="list.clipboard" color={color} />,
+      }}
       />
       <Tabs.Screen
-        name="schedule"
-        options={{
-          title: 'Schedule',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
-        }}
+      name="schedule"
+      options={{
+        title: 'Schedule',
+        tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
+      }}
       />
     </Tabs>
   );

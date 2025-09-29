@@ -110,9 +110,8 @@ const mockDailySchedule: DailySchedule[] = [
 ];
 
 export default function ScheduleScreen() {
-  const [schedule, setSchedule] = useState<DailySchedule[]>(mockDailySchedule);
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const [schedule] = useState<DailySchedule[]>(mockDailySchedule);
+  const colors = Colors;
 
   const handleDayPress = (daySchedule: DailySchedule) => {
     if (daySchedule.isRestDay) {
@@ -145,23 +144,22 @@ export default function ScheduleScreen() {
       <TouchableOpacity
         style={[
           styles.scheduleCard,
-          { backgroundColor: colors.card },
-          isToday && { borderColor: colors.tint, borderWidth: 2 }
+          { backgroundColor: colors.white },
+          isToday && { borderColor: colors.primary, borderWidth: 2 }
         ]}
-        onPress={() => handleDayPress(item)}
       >
         <View style={styles.scheduleHeader}>
           <View style={styles.dayInfo}>
             <View style={styles.dayTitleContainer}>
               <ThemedText style={[
                 styles.dayName,
-                isToday && { color: colors.tint }
+                isToday && { color: colors.primary }
               ]}>
                 {formatDayName(item.dayOfWeek)}
               </ThemedText>
               {isToday && (
-                <View style={[styles.todayBadge, { backgroundColor: colors.tint }]}>
-                  <Text style={styles.todayText}>TODAY</Text>
+                <View style={[styles.todayBadge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.todayText}>Today</Text>
                 </View>
               )}
             </View>
@@ -183,8 +181,8 @@ export default function ScheduleScreen() {
                 )}
                 {item.workoutPlan?.estimatedDuration && (
                   <View style={styles.durationContainer}>
-                    <Ionicons name="time-outline" size={16} color={colors.icon} />
-                    <Text style={[styles.durationText, { color: colors.icon }]}>
+                    <Ionicons name="time-outline" size={16} color={colors.gray600} />
+                    <Text style={[styles.durationText, { color: colors.gray600 }]}>
                       {item.workoutPlan.estimatedDuration} min
                     </Text>
                   </View>
@@ -203,67 +201,12 @@ export default function ScheduleScreen() {
             onPress={() => handleEditPress(item)}
             style={styles.editButton}
           >
-            <Ionicons name="pencil" size={20} color={colors.tint} />
+            <Ionicons name="pencil" size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
   };
-
-  const todaySchedule = schedule.find(s => s.dayOfWeek === getCurrentDay());
-
-  return (
-    <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText style={styles.title}>Weekly Schedule</ThemedText>
-      </View>
-
-      {todaySchedule && (
-        <View style={styles.todaySection}>
-          <ThemedText style={styles.todaySectionTitle}>Today's Workout</ThemedText>
-          <View style={[styles.todayCard, { backgroundColor: colors.card }]}>
-            {todaySchedule.isRestDay ? (
-              <View style={styles.todayRestContainer}>
-                <Ionicons name="bed-outline" size={32} color="#10B981" />
-                <ThemedText style={styles.todayRestTitle}>Rest Day</ThemedText>
-                <ThemedText style={styles.todayRestSubtitle}>
-                  {todaySchedule.notes || 'Take a well-deserved break'}
-                </ThemedText>
-              </View>
-            ) : (
-              <View style={styles.todayWorkoutContainer}>
-                <Ionicons name="fitness-outline" size={32} color={colors.tint} />
-                <ThemedText style={styles.todayWorkoutTitle}>
-                  {todaySchedule.workoutPlan?.name}
-                </ThemedText>
-                <ThemedText style={styles.todayWorkoutSubtitle}>
-                  {todaySchedule.workoutPlan?.description}
-                </ThemedText>
-                <TouchableOpacity
-                  style={[styles.startWorkoutButton, { backgroundColor: colors.tint }]}
-                  onPress={() => Alert.alert('Start Workout', 'Starting workout session...')}
-                >
-                  <Ionicons name="play" size={20} color="white" />
-                  <Text style={styles.startWorkoutText}>Start Workout</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
-      )}
-
-      <View style={styles.weeklySection}>
-        <ThemedText style={styles.weeklySectionTitle}>Weekly Overview</ThemedText>
-        <FlatList
-          data={schedule}
-          keyExtractor={(item) => item.id}
-          renderItem={renderScheduleItem}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
-    </ThemedView>
-  );
 }
 
 const styles = StyleSheet.create({
