@@ -223,7 +223,7 @@ export const Components = {
 // Layout constants
 export const Layout = {
   // Screen padding
-  screenPadding: Spacing.lg,
+  screenPadding: Spacing.md,
   
   // Header heights
   headerHeight: 56,

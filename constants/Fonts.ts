@@ -81,6 +81,7 @@ import {
     Montserrat_400Regular,
     Montserrat_500Medium,
     Montserrat_600SemiBold,
+    Montserrat_700Bold
 } from '@expo-google-fonts/montserrat';
 
 export const FontAssets = {
@@ -100,4 +101,5 @@ export const FontAssets = {
   Montserrat_400Regular,
   Montserrat_500Medium,
   Montserrat_600SemiBold,
+  Montserrat_700Bold,
 };

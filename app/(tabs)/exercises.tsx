@@ -1,24 +1,23 @@
-import {
-  AnimatedBadge,
-  AnimatedButton,
-  AnimatedCard,
-  FadeInView,
-  SlideInView
-} from "@/components/ui/AnimatedComponents";
-import { BorderRadius, Colors, Layout, Spacing } from "@/constants/theme";
-import { Typography } from "@/constants/Typography";
+import { FadeInView } from "@/components/ui/AnimatedComponents";
+import { Spacing } from "@/constants/theme";
 import { BodyPart, Exercise, ExerciseType } from "@/types/gym";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
 import {
   Alert,
   Dimensions,
   FlatList,
+  Modal,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Mock data for now - will be replaced with actual storage later
 const mockExercises: Exercise[] = [
@@ -59,13 +58,55 @@ const mockExercises: Exercise[] = [
   },
 ];
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 export default function ExercisesScreen() {
   const [exercises, setExercises] = useState<Exercise[]>(mockExercises);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | "all">("all");
+  const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | "all">(
+    "all"
+  );
   const [selectedType, setSelectedType] = useState<ExerciseType | "all">("all");
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
+  const [viewingExercise, setViewingExercise] = useState<Exercise | null>(null);
+
+  // Dropdown states for add exercise modal
+  const [showBodyPartDropdown, setShowBodyPartDropdown] = useState(false);
+  const [showExerciseTypeDropdown, setShowExerciseTypeDropdown] =
+    useState(false);
+  const [showDifficultyDropdown, setShowDifficultyDropdown] = useState(false);
+
+  // Dropdown states for edit exercise modal
+  const [showEditBodyPartDropdown, setShowEditBodyPartDropdown] =
+    useState(false);
+  const [showEditExerciseTypeDropdown, setShowEditExerciseTypeDropdown] =
+    useState(false);
+  const [showEditDifficultyDropdown, setShowEditDifficultyDropdown] =
+    useState(false);
+
+  // Add exercise form state
+  const [newExercise, setNewExercise] = useState({
+    name: "",
+    bodyPart: "chest" as BodyPart,
+    type: "compound" as ExerciseType,
+    description: "",
+    difficulty: "beginner" as "beginner" | "intermediate" | "advanced",
+    equipment: "",
+  });
+
+  // Edit exercise form state
+  const [editExercise, setEditExercise] = useState({
+    name: "",
+    bodyPart: "chest" as BodyPart,
+    type: "compound" as ExerciseType,
+    description: "",
+    difficulty: "beginner" as "beginner" | "intermediate" | "advanced",
+    equipment: "",
+  });
 
   const filteredExercises = exercises.filter((exercise) => {
     const matchesSearch =
@@ -80,88 +121,214 @@ export default function ExercisesScreen() {
   });
 
   const handleExercisePress = (exerciseId: string) => {
-    Alert.alert("Exercise Details", `Viewing exercise ${exerciseId}`);
+    const exercise = exercises.find((ex) => ex.id === exerciseId);
+    if (exercise) {
+      setViewingExercise(exercise);
+      setShowViewModal(true);
+    }
   };
 
   const handleEditPress = (exerciseId: string) => {
-    Alert.alert("Edit Exercise", `Editing exercise ${exerciseId}`);
+    const exercise = exercises.find((ex) => ex.id === exerciseId);
+    if (exercise) {
+      setEditingExercise(exercise);
+      setEditExercise({
+        name: exercise.name,
+        bodyPart: exercise.bodyPart,
+        type: exercise.type,
+        description: exercise.description,
+        difficulty: exercise.difficulty || "beginner",
+        equipment: exercise.equipment?.join(", ") || "",
+      });
+      setShowEditModal(true);
+    }
   };
 
   const handleAddPress = () => {
-    Alert.alert("Add Exercise", "Add new exercise functionality coming soon!");
+    setShowAddModal(true);
   };
 
-  const getBodyPartColor = (bodyPart: string) => {
-    const colors: { [key: string]: string } = {
-      chest: Colors.primary,
-      back: Colors.success,
-      shoulders: Colors.warning,
-      biceps: Colors.info,
-      triceps: Colors.error,
-      legs: '#9C27B0',
-      glutes: '#E91E63',
-      core: '#FF5722',
-      calves: '#795548',
-      forearms: '#607D8B',
-      'full-body': Colors.gray600,
+  const closeAllDropdowns = () => {
+    setShowBodyPartDropdown(false);
+    setShowExerciseTypeDropdown(false);
+    setShowDifficultyDropdown(false);
+  };
+
+  const closeAllEditDropdowns = () => {
+    setShowEditBodyPartDropdown(false);
+    setShowEditExerciseTypeDropdown(false);
+    setShowEditDifficultyDropdown(false);
+  };
+
+  const handleAddExercise = () => {
+    const exercise: Exercise = {
+      id: Date.now().toString(),
+      name: newExercise.name,
+      bodyPart: newExercise.bodyPart,
+      type: newExercise.type,
+      description: newExercise.description,
+      difficulty: newExercise.difficulty,
+      equipment: newExercise.equipment.split(",").map((e) => e.trim()),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
-    return colors[bodyPart] || Colors.gray500;
+
+    setExercises([...exercises, exercise]);
+    setNewExercise({
+      name: "",
+      bodyPart: "chest",
+      type: "compound",
+      description: "",
+      difficulty: "beginner",
+      equipment: "",
+    });
+    setShowAddModal(false);
+    Alert.alert("Success", "Exercise added successfully!");
   };
 
-  const getTypeColor = (type: string) => {
-    const colors: { [key: string]: string } = {
-      cardio: '#F44336',
-      compound: Colors.primary,
-      isolated: Colors.info,
-      mobility: Colors.success,
+  const handleUpdateExercise = () => {
+    if (!editingExercise) return;
+
+    const updatedExercise: Exercise = {
+      ...editingExercise,
+      name: editExercise.name,
+      bodyPart: editExercise.bodyPart,
+      type: editExercise.type,
+      description: editExercise.description,
+      difficulty: editExercise.difficulty,
+      equipment: editExercise.equipment.split(",").map((e) => e.trim()),
+      updatedAt: new Date(),
     };
-    return colors[type] || Colors.gray500;
+
+    setExercises(
+      exercises.map((ex) =>
+        ex.id === editingExercise.id ? updatedExercise : ex
+      )
+    );
+
+    setShowEditModal(false);
+    setEditingExercise(null);
+    closeAllEditDropdowns();
+    Alert.alert("Success", "Exercise updated successfully!");
   };
 
-  const renderExerciseItem = ({ item, index }: { item: Exercise; index: number }) => (
-    <FadeInView delay={index * 100}>
-      <AnimatedCard
+  const clearFilters = () => {
+    setSelectedBodyPart("all");
+    setSelectedType("all");
+  };
+
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (selectedBodyPart !== "all") count++;
+    if (selectedType !== "all") count++;
+    return count;
+  };
+
+  const getDifficultyColor = (difficulty: string): [string, string] => {
+    switch (difficulty) {
+      case "beginner":
+        return ["#10B981", "#059669"];
+      case "intermediate":
+        return ["#F59E0B", "#D97706"];
+      case "advanced":
+        return ["#EF4444", "#DC2626"];
+      default:
+        return ["#6B7280", "#4B5563"];
+    }
+  };
+
+  const getBodyPartIcon = (bodyPart: string) => {
+    const iconMap: { [key: string]: string } = {
+      chest: "fitness",
+      back: "body",
+      shoulders: "barbell",
+      biceps: "fitness",
+      triceps: "fitness",
+      legs: "walk",
+      glutes: "body",
+      core: "body",
+      calves: "walk",
+      forearms: "fitness",
+      "full-body": "body",
+    };
+    return iconMap[bodyPart] || "fitness";
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const renderExerciseItem = ({
+    item,
+    index,
+  }: {
+    item: Exercise;
+    index: number;
+  }) => (
+    <FadeInView delay={index * 50}>
+      <TouchableOpacity
         onPress={() => handleExercisePress(item.id)}
         style={styles.exerciseCard}
-        elevation="md"
-        padding="lg"
+        activeOpacity={0.95}
       >
-        <View style={styles.exerciseHeader}>
-          <View style={styles.exerciseInfo}>
-            <Text style={Typography.h6}>{item.name}</Text>
-            <View style={styles.badgeContainer}>
-              <AnimatedBadge
-                text={item.bodyPart}
-                variant="primary"
-                size="small"
-              />
-              <AnimatedBadge
-                text={item.type}
-                variant="secondary"
-                size="small"
-              />
-              {item.difficulty && (
-                <AnimatedBadge
-                  text={item.difficulty}
-                  variant="success"
-                  size="small"
+        <LinearGradient
+          colors={["#FFFFFF", "#F8FAFC"]}
+          style={styles.cardGradient}
+        >
+          <View style={styles.exerciseHeader}>
+            <View style={styles.iconContainer}>
+              <LinearGradient
+                colors={["#FB923C", "#F97316"]}
+                style={styles.iconGradient}
+              >
+                <Ionicons
+                  name={getBodyPartIcon(item.bodyPart) as any}
+                  size={18}
+                  color="#FFFFFF"
                 />
-              )}
+              </LinearGradient>
+            </View>
+
+            <View style={styles.exerciseContent}>
+              <View style={styles.titleRow}>
+                <Text style={styles.exerciseTitle}>{item.name}</Text>
+                <TouchableOpacity
+                  onPress={() => handleEditPress(item.id)}
+                  style={styles.editButton}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="pencil" size={14} color="#FB923C" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.exerciseDescription} numberOfLines={1}>
+                {item.description}
+              </Text>
+
+              <View style={styles.badgeRow}>
+                <View style={styles.bodyPartBadge}>
+                  <Text style={styles.bodyPartText}>{item.bodyPart}</Text>
+                </View>
+
+                <View style={styles.typeBadge}>
+                  <Text style={styles.typeText}>{item.type}</Text>
+                </View>
+
+                <LinearGradient
+                  colors={getDifficultyColor(item?.difficulty ?? "")}
+                  style={styles.difficultyBadge}
+                >
+                  <Text style={styles.difficultyText}>{item.difficulty}</Text>
+                </LinearGradient>
+              </View>
             </View>
           </View>
-          <AnimatedCard
-            onPress={() => handleEditPress(item.id)}
-            style={styles.editButton}
-            elevation="sm"
-            padding="sm"
-          >
-            <Ionicons name="pencil" size={18} color={Colors.primary} />
-          </AnimatedCard>
-        </View>
-        <Text style={[Typography.description, { marginTop: Spacing.sm }]} numberOfLines={2}>
-          {item.description}
-        </Text>
-      </AnimatedCard>
+        </LinearGradient>
+      </TouchableOpacity>
     </FadeInView>
   );
 
@@ -188,89 +355,59 @@ export default function ExercisesScreen() {
     "mobility",
   ];
 
+  const difficulties = ["beginner", "intermediate", "advanced"];
+
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <FadeInView style={styles.header}>
-        <Text style={Typography.h3}>Exercises</Text>
-        <AnimatedButton
-          title="Add"
-          onPress={handleAddPress}
-          variant="primary"
-          size="medium"
-          style={styles.addButton}
-        />
-      </FadeInView>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#FB923C" />
 
-      {/* Search Bar */}
-      <SlideInView delay={100} style={styles.searchContainer}>
-        <View style={styles.searchInput}>
-          <Ionicons name="search" size={20} color={Colors.gray400} />
-          <TextInput
-            style={styles.textInput}
-            placeholder="Search exercises..."
-            placeholderTextColor={Colors.gray400}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+      {/* Compact Header */}
+      <LinearGradient
+        colors={["#FB923C", "#F97316"]}
+        style={styles.headerGradient}
+      >
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Exercises</Text>
+            <Text style={styles.headerCount}>
+              {filteredExercises.length} available
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={handleAddPress}
+            style={styles.addButton}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
-      </SlideInView>
+      </LinearGradient>
 
-      {/* Body Part Filters */}
-      <SlideInView delay={200} style={styles.filtersContainer}>
-        <Text style={[Typography.label, { marginBottom: Spacing.sm }]}>Body Parts</Text>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={bodyParts}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <AnimatedCard
-              onPress={() => setSelectedBodyPart(item)}
-              style={selectedBodyPart === item ? styles.activeFilterChip : styles.filterChip}
-              elevation={selectedBodyPart === item ? "md" : "sm"}
-              padding="sm"
-            >
-              <Text
-                style={[
-                  Typography.caption,
-                  { color: selectedBodyPart === item ? Colors.white : Colors.textSecondary },
-                ]}
-              >
-                {item}
-              </Text>
-            </AnimatedCard>
-          )}
-        />
-      </SlideInView>
+      {/* Compact Search & Filter */}
+      <View style={styles.searchSection}>
+        <View style={styles.searchRow}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={16} color="#9CA3AF" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search exercises..."
+              placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
 
-      {/* Exercise Type Filters */}
-      <SlideInView delay={300} style={styles.filtersContainer}>
-        <Text style={[Typography.label, { marginBottom: Spacing.sm }]}>Exercise Types</Text>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={exerciseTypes}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <AnimatedCard
-              onPress={() => setSelectedType(item)}
-              style={selectedType === item ? styles.activeFilterChip : styles.filterChip}
-              elevation={selectedType === item ? "md" : "sm"}
-              padding="sm"
-            >
-              <Text
-                style={[
-                  Typography.caption,
-                  { color: selectedType === item ? Colors.white : Colors.textSecondary },
-                ]}
-              >
-                {item}
-              </Text>
-            </AnimatedCard>
-          )}
-        />
-      </SlideInView>
+          <TouchableOpacity
+            onPress={() => setShowFiltersModal(true)}
+            style={styles.filterButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="options" size={16} color="#FB923C" />
+            {getActiveFiltersCount() > 0 && <View style={styles.filterDot} />}
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Exercise List */}
       <FlatList
@@ -279,97 +416,1496 @@ export default function ExercisesScreen() {
         renderItem={renderExerciseItem}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
-    </View>
+
+      {/* Filters Modal */}
+      <Modal
+        visible={showFiltersModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <LinearGradient
+            colors={["#FB923C", "#F97316"]}
+            style={styles.modalHeader}
+          >
+            <Text style={styles.modalTitle}>Filters</Text>
+            <TouchableOpacity
+              onPress={() => setShowFiltersModal(false)}
+              style={styles.modalCloseButton}
+            >
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </LinearGradient>
+
+          <ScrollView style={styles.modalContent}>
+            {/* Body Parts */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterTitle}>Body Parts</Text>
+              <View style={styles.chipGrid}>
+                {bodyParts.map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    onPress={() => setSelectedBodyPart(item)}
+                    style={[
+                      styles.filterChip,
+                      selectedBodyPart === item && styles.activeChip,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selectedBodyPart === item && styles.activeChipText,
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Exercise Types */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterTitle}>Types</Text>
+              <View style={styles.chipGrid}>
+                {exerciseTypes.map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    onPress={() => setSelectedType(item)}
+                    style={[
+                      styles.filterChip,
+                      selectedType === item && styles.activeChip,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selectedType === item && styles.activeChipText,
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity onPress={clearFilters} style={styles.clearButton}>
+              <Text style={styles.clearText}>Clear</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowFiltersModal(false)}
+              style={styles.applyButton}
+            >
+              <LinearGradient
+                colors={["#FB923C", "#F97316"]}
+                style={styles.applyGradient}
+              >
+                <Text style={styles.applyText}>Apply</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Add Exercise Modal */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <LinearGradient
+            colors={["#FB923C", "#F97316"]}
+            style={styles.modalHeader}
+          >
+            <Text style={styles.modalTitle}>Add Exercise</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setShowAddModal(false);
+                closeAllDropdowns();
+              }}
+              style={styles.modalCloseButton}
+            >
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </LinearGradient>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Name</Text>
+              <TextInput
+                style={styles.input}
+                value={newExercise.name}
+                onChangeText={(text) =>
+                  setNewExercise({ ...newExercise, name: text })
+                }
+                placeholder="Exercise name"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={newExercise.description}
+                onChangeText={(text) =>
+                  setNewExercise({ ...newExercise, description: text })
+                }
+                placeholder="Description"
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Equipment</Text>
+              <TextInput
+                style={styles.input}
+                value={newExercise.equipment}
+                onChangeText={(text) =>
+                  setNewExercise({ ...newExercise, equipment: text })
+                }
+                placeholder="e.g., barbell, bench"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Body Part</Text>
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => {
+                    closeAllDropdowns();
+                    setShowBodyPartDropdown(!showBodyPartDropdown);
+                  }}
+                >
+                  <Text style={styles.dropdownText}>
+                    {newExercise.bodyPart}
+                  </Text>
+                  <Ionicons
+                    name={showBodyPartDropdown ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+                {showBodyPartDropdown && (
+                  <ScrollView
+                    style={styles.dropdownMenu}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {bodyParts
+                      .filter((part) => part !== "all")
+                      .map((part, index) => (
+                        <TouchableOpacity
+                          key={part}
+                          style={[
+                            styles.dropdownItem,
+                            index ===
+                              bodyParts.filter((p) => p !== "all").length - 1 &&
+                              styles.lastDropdownItem,
+                          ]}
+                          onPress={() => {
+                            setNewExercise({
+                              ...newExercise,
+                              bodyPart: part as BodyPart,
+                            });
+                            setShowBodyPartDropdown(false);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.dropdownItemText,
+                              newExercise.bodyPart === part &&
+                                styles.selectedDropdownText,
+                            ]}
+                          >
+                            {part}
+                          </Text>
+                          {newExercise.bodyPart === part && (
+                            <Ionicons
+                              name="checkmark"
+                              size={16}
+                              color="#FB923C"
+                            />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                  </ScrollView>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Exercise Type</Text>
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => {
+                    closeAllDropdowns();
+                    setShowExerciseTypeDropdown(!showExerciseTypeDropdown);
+                  }}
+                >
+                  <Text style={styles.dropdownText}>{newExercise.type}</Text>
+                  <Ionicons
+                    name={
+                      showExerciseTypeDropdown ? "chevron-up" : "chevron-down"
+                    }
+                    size={16}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+                {showExerciseTypeDropdown && (
+                  <View style={styles.dropdownMenu}>
+                    {exerciseTypes
+                      .filter((type) => type !== "all")
+                      .map((type, index) => (
+                        <TouchableOpacity
+                          key={type}
+                          style={[
+                            styles.dropdownItem,
+                            index ===
+                              exerciseTypes.filter((t) => t !== "all").length -
+                                1 && styles.lastDropdownItem,
+                          ]}
+                          onPress={() => {
+                            setNewExercise({
+                              ...newExercise,
+                              type: type as ExerciseType,
+                            });
+                            setShowExerciseTypeDropdown(false);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.dropdownItemText,
+                              newExercise.type === type &&
+                                styles.selectedDropdownText,
+                            ]}
+                          >
+                            {type}
+                          </Text>
+                          {newExercise.type === type && (
+                            <Ionicons
+                              name="checkmark"
+                              size={16}
+                              color="#FB923C"
+                            />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Difficulty Level</Text>
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => {
+                    closeAllDropdowns();
+                    setShowDifficultyDropdown(!showDifficultyDropdown);
+                  }}
+                >
+                  <Text style={styles.dropdownText}>
+                    {newExercise.difficulty}
+                  </Text>
+                  <Ionicons
+                    name={
+                      showDifficultyDropdown ? "chevron-up" : "chevron-down"
+                    }
+                    size={16}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+                {showDifficultyDropdown && (
+                  <View style={styles.dropdownMenu}>
+                    {difficulties.map((difficulty, index) => (
+                      <TouchableOpacity
+                        key={difficulty}
+                        style={[
+                          styles.dropdownItem,
+                          index === difficulties.length - 1 &&
+                            styles.lastDropdownItem,
+                        ]}
+                        onPress={() => {
+                          setNewExercise({
+                            ...newExercise,
+                            difficulty: difficulty as
+                              | "beginner"
+                              | "intermediate"
+                              | "advanced",
+                          });
+                          setShowDifficultyDropdown(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.dropdownItemText,
+                            newExercise.difficulty === difficulty &&
+                              styles.selectedDropdownText,
+                          ]}
+                        >
+                          {difficulty}
+                        </Text>
+                        {newExercise.difficulty === difficulty && (
+                          <Ionicons
+                            name="checkmark"
+                            size={16}
+                            color="#FB923C"
+                          />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              onPress={() => {
+                setShowAddModal(false);
+                closeAllDropdowns();
+              }}
+              style={styles.clearButton}
+            >
+              <Text style={styles.clearText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleAddExercise}
+              style={styles.applyButton}
+              disabled={!newExercise.name.trim()}
+            >
+              <LinearGradient
+                colors={
+                  !newExercise.name.trim()
+                    ? ["#9CA3AF", "#6B7280"]
+                    : ["#FB923C", "#F97316"]
+                }
+                style={styles.applyGradient}
+              >
+                <Text style={styles.applyText}>Add</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Edit Exercise Modal */}
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <LinearGradient
+            colors={["#FB923C", "#F97316"]}
+            style={styles.modalHeader}
+          >
+            <Text style={styles.modalTitle}>Edit Exercise</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setShowEditModal(false);
+                setEditingExercise(null);
+                closeAllEditDropdowns();
+              }}
+              style={styles.modalCloseButton}
+            >
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </LinearGradient>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Name</Text>
+              <TextInput
+                style={styles.input}
+                value={editExercise.name}
+                onChangeText={(text) =>
+                  setEditExercise({ ...editExercise, name: text })
+                }
+                placeholder="Exercise name"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={editExercise.description}
+                onChangeText={(text) =>
+                  setEditExercise({ ...editExercise, description: text })
+                }
+                placeholder="Description"
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Equipment</Text>
+              <TextInput
+                style={styles.input}
+                value={editExercise.equipment}
+                onChangeText={(text) =>
+                  setEditExercise({ ...editExercise, equipment: text })
+                }
+                placeholder="e.g., barbell, bench"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Body Part</Text>
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => {
+                    closeAllEditDropdowns();
+                    setShowEditBodyPartDropdown(!showEditBodyPartDropdown);
+                  }}
+                >
+                  <Text style={styles.dropdownText}>
+                    {editExercise.bodyPart}
+                  </Text>
+                  <Ionicons
+                    name={
+                      showEditBodyPartDropdown ? "chevron-up" : "chevron-down"
+                    }
+                    size={16}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+                {showEditBodyPartDropdown && (
+                  <ScrollView
+                    style={styles.dropdownMenu}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {bodyParts
+                      .filter((part) => part !== "all")
+                      .map((part, index) => (
+                        <TouchableOpacity
+                          key={part}
+                          style={[
+                            styles.dropdownItem,
+                            index ===
+                              bodyParts.filter((p) => p !== "all").length - 1 &&
+                              styles.lastDropdownItem,
+                          ]}
+                          onPress={() => {
+                            setEditExercise({
+                              ...editExercise,
+                              bodyPart: part as BodyPart,
+                            });
+                            setShowEditBodyPartDropdown(false);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.dropdownItemText,
+                              editExercise.bodyPart === part &&
+                                styles.selectedDropdownText,
+                            ]}
+                          >
+                            {part}
+                          </Text>
+                          {editExercise.bodyPart === part && (
+                            <Ionicons
+                              name="checkmark"
+                              size={16}
+                              color="#FB923C"
+                            />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                  </ScrollView>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Exercise Type</Text>
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => {
+                    closeAllEditDropdowns();
+                    setShowEditExerciseTypeDropdown(
+                      !showEditExerciseTypeDropdown
+                    );
+                  }}
+                >
+                  <Text style={styles.dropdownText}>{editExercise.type}</Text>
+                  <Ionicons
+                    name={
+                      showEditExerciseTypeDropdown
+                        ? "chevron-up"
+                        : "chevron-down"
+                    }
+                    size={16}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+                {showEditExerciseTypeDropdown && (
+                  <View style={styles.dropdownMenu}>
+                    {exerciseTypes
+                      .filter((type) => type !== "all")
+                      .map((type, index) => (
+                        <TouchableOpacity
+                          key={type}
+                          style={[
+                            styles.dropdownItem,
+                            index ===
+                              exerciseTypes.filter((t) => t !== "all").length -
+                                1 && styles.lastDropdownItem,
+                          ]}
+                          onPress={() => {
+                            setEditExercise({
+                              ...editExercise,
+                              type: type as ExerciseType,
+                            });
+                            setShowEditExerciseTypeDropdown(false);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.dropdownItemText,
+                              editExercise.type === type &&
+                                styles.selectedDropdownText,
+                            ]}
+                          >
+                            {type}
+                          </Text>
+                          {editExercise.type === type && (
+                            <Ionicons
+                              name="checkmark"
+                              size={16}
+                              color="#FB923C"
+                            />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Difficulty Level</Text>
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => {
+                    closeAllEditDropdowns();
+                    setShowEditDifficultyDropdown(!showEditDifficultyDropdown);
+                  }}
+                >
+                  <Text style={styles.dropdownText}>
+                    {editExercise.difficulty}
+                  </Text>
+                  <Ionicons
+                    name={
+                      showEditDifficultyDropdown ? "chevron-up" : "chevron-down"
+                    }
+                    size={16}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+                {showEditDifficultyDropdown && (
+                  <View style={styles.dropdownMenu}>
+                    {difficulties.map((difficulty, index) => (
+                      <TouchableOpacity
+                        key={difficulty}
+                        style={[
+                          styles.dropdownItem,
+                          index === difficulties.length - 1 &&
+                            styles.lastDropdownItem,
+                        ]}
+                        onPress={() => {
+                          setEditExercise({
+                            ...editExercise,
+                            difficulty: difficulty as
+                              | "beginner"
+                              | "intermediate"
+                              | "advanced",
+                          });
+                          setShowEditDifficultyDropdown(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.dropdownItemText,
+                            editExercise.difficulty === difficulty &&
+                              styles.selectedDropdownText,
+                          ]}
+                        >
+                          {difficulty}
+                        </Text>
+                        {editExercise.difficulty === difficulty && (
+                          <Ionicons
+                            name="checkmark"
+                            size={16}
+                            color="#FB923C"
+                          />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              onPress={() => {
+                setShowEditModal(false);
+                setEditingExercise(null);
+                closeAllEditDropdowns();
+              }}
+              style={styles.clearButton}
+            >
+              <Text style={styles.clearText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleUpdateExercise}
+              style={styles.applyButton}
+              disabled={!editExercise.name.trim()}
+            >
+              <LinearGradient
+                colors={
+                  !editExercise.name.trim()
+                    ? ["#9CA3AF", "#6B7280"]
+                    : ["#FB923C", "#F97316"]
+                }
+                style={styles.applyGradient}
+              >
+                <Text style={styles.applyText}>Update</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* View Exercise Modal */}
+      <Modal
+        visible={showViewModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <LinearGradient
+            colors={["#FB923C", "#F97316"]}
+            style={styles.viewModalHeader}
+          >
+            <View style={styles.viewModalHeaderContent}>
+              <View style={styles.viewModalTitleContainer}>
+                <Text style={styles.modalTitle}>{viewingExercise?.name}</Text>
+                <View style={styles.viewModalBadgeRow}>
+                  <View style={styles.viewBodyPartBadge}>
+                    <Ionicons
+                      name={
+                        getBodyPartIcon(viewingExercise?.bodyPart || "") as any
+                      }
+                      size={12}
+                      color="#FFFFFF"
+                    />
+                    <Text style={styles.viewBodyPartText}>
+                      {viewingExercise?.bodyPart}
+                    </Text>
+                  </View>
+                  <LinearGradient
+                    colors={getDifficultyColor(
+                      viewingExercise?.difficulty || ""
+                    )}
+                    style={styles.viewDifficultyBadge}
+                  >
+                    <Text style={styles.viewDifficultyText}>
+                      {viewingExercise?.difficulty}
+                    </Text>
+                  </LinearGradient>
+                </View>
+              </View>
+              <View style={styles.viewModalActions}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowViewModal(false);
+                    if (viewingExercise) {
+                      handleEditPress(viewingExercise.id);
+                    }
+                  }}
+                  style={styles.viewEditButton}
+                >
+                  <Ionicons name="pencil" size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowViewModal(false);
+                    setViewingExercise(null);
+                  }}
+                  style={styles.modalCloseButton}
+                >
+                  <Ionicons name="close" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </LinearGradient>
+
+          <ScrollView
+            style={styles.viewModalContent}
+            contentContainerStyle={styles.viewModalScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Exercise Type Card */}
+            <View style={styles.viewCard}>
+              <View style={styles.viewCardHeader}>
+                <Ionicons name="barbell" size={20} color="#FB923C" />
+                <Text style={styles.viewCardTitle}>Exercise Type</Text>
+              </View>
+              <View style={styles.viewTypeContainer}>
+                <View style={styles.viewTypeBadge}>
+                  <Text style={styles.viewTypeText}>
+                    {viewingExercise?.type}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Description Card */}
+            {viewingExercise?.description && (
+              <View style={styles.viewCard}>
+                <View style={styles.viewCardHeader}>
+                  <Ionicons name="document-text" size={20} color="#FB923C" />
+                  <Text style={styles.viewCardTitle}>Description</Text>
+                </View>
+                <Text style={styles.viewDescriptionText}>
+                  {viewingExercise.description}
+                </Text>
+              </View>
+            )}
+
+            {/* Equipment Card */}
+            {viewingExercise?.equipment &&
+              viewingExercise.equipment.length > 0 && (
+                <View style={styles.viewCard}>
+                  <View style={styles.viewCardHeader}>
+                    <Ionicons name="hardware-chip" size={20} color="#FB923C" />
+                    <Text style={styles.viewCardTitle}>Equipment</Text>
+                  </View>
+                  <View style={styles.viewEquipmentContainer}>
+                    {viewingExercise.equipment.map((item, index) => (
+                      <View key={index} style={styles.viewEquipmentChip}>
+                        <Text style={styles.viewEquipmentText}>{item}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+            {/* Exercise Details Card */}
+            <View style={styles.viewCard}>
+              <View style={styles.viewCardHeader}>
+                <Ionicons name="information-circle" size={20} color="#FB923C" />
+                <Text style={styles.viewCardTitle}>Details</Text>
+              </View>
+              <View style={styles.viewDetailsContainer}>
+                <View style={styles.viewDetailRow}>
+                  <Text style={styles.viewDetailLabel}>Created</Text>
+                  <Text style={styles.viewDetailValue}>
+                    {viewingExercise?.createdAt
+                      ? formatDate(viewingExercise.createdAt)
+                      : "N/A"}
+                  </Text>
+                </View>
+                <View style={styles.viewDetailRow}>
+                  <Text style={styles.viewDetailLabel}>Last Updated</Text>
+                  <Text style={styles.viewDetailValue}>
+                    {viewingExercise?.updatedAt
+                      ? formatDate(viewingExercise.updatedAt)
+                      : "N/A"}
+                  </Text>
+                </View>
+                <View style={styles.viewDetailRow}>
+                  <Text style={styles.viewDetailLabel}>Exercise ID</Text>
+                  <Text style={styles.viewDetailValue}>
+                    #{viewingExercise?.id}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Bottom Action Buttons */}
+            <View style={styles.viewBottomActions}>
+              <TouchableOpacity
+                style={styles.viewActionButton}
+                onPress={() =>
+                  Alert.alert(
+                    "Coming Soon",
+                    "Workout logging feature will be available soon!"
+                  )
+                }
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={["#10B981", "#059669"]}
+                  style={styles.viewActionButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <View style={styles.viewActionButtonContent}>
+                    <View style={styles.viewActionButtonIconContainer}>
+                      <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.viewActionButtonTextContainer}>
+                      <Text style={styles.viewActionButtonTitle}>
+                        Log Workout
+                      </Text>
+                      <Text style={styles.viewActionButtonSubtitle}>
+                        Start tracking sets & reps
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color="#FFFFFF"
+                    />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.viewActionButton}
+                onPress={() =>
+                  Alert.alert(
+                    "Coming Soon",
+                    "Exercise history feature will be available soon!"
+                  )
+                }
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={["#3B82F6", "#1D4ED8"]}
+                  style={styles.viewActionButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <View style={styles.viewActionButtonContent}>
+                    <View style={styles.viewActionButtonIconContainer}>
+                      <Ionicons name="bar-chart" size={20} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.viewActionButtonTextContainer}>
+                      <Text style={styles.viewActionButtonTitle}>
+                        View History
+                      </Text>
+                      <Text style={styles.viewActionButtonSubtitle}>
+                        See past performances
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color="#FFFFFF"
+                    />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
-    paddingTop: Layout.screenPadding * 2,
+    backgroundColor: "#F8FAFC",
+  },
+  headerGradient: {
+    paddingBottom: 16,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: Layout.screenPadding,
-    marginBottom: Spacing.xl,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontFamily: "Montserrat_700Bold",
+    color: "#FFFFFF",
+    marginBottom: 2,
+  },
+  headerCount: {
+    fontSize: 13,
+    fontFamily: "Montserrat_500Medium",
+    color: "#FED7AA",
   },
   addButton: {
-    minWidth: 80,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  searchContainer: {
-    paddingHorizontal: Layout.screenPadding,
-    marginBottom: Spacing.lg,
+  searchSection: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
-  searchInput: {
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.gray50,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.gray200,
-    gap: Spacing.sm,
+    gap: 12,
   },
-  textInput: {
+  searchContainer: {
     flex: 1,
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textPrimary,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 40,
+    gap: 8,
   },
-  filtersContainer: {
-    paddingHorizontal: Layout.screenPadding,
-    marginBottom: Spacing.lg,
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Montserrat_500Medium",
+    color: "#1F2937",
   },
-  filterChip: {
-    marginRight: Spacing.sm,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.gray200,
-    minWidth: 60,
-    alignItems: 'center',
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
-  activeFilterChip: {
-    marginRight: Spacing.sm,
-    backgroundColor: Colors.primary,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    minWidth: 60,
-    alignItems: 'center',
+  filterDot: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#EF4444",
   },
   listContainer: {
-    paddingHorizontal: Layout.screenPadding,
-    paddingBottom: Spacing['4xl'],
-    gap: Spacing.md,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+  separator: {
+    height: 8,
   },
   exerciseCard: {
-    marginBottom: Spacing.md,
-    minHeight: 120,
+    borderRadius: 16,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  cardGradient: {
+    padding: 16,
   },
   exerciseHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: Spacing.sm,
+    gap: 12,
   },
-  exerciseInfo: {
+  iconContainer: {
+    marginTop: 2,
+  },
+  iconGradient: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  exerciseContent: {
     flex: 1,
   },
-  badgeContainer: {
+  titleRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.xs,
-    marginTop: Spacing.sm,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
+  exerciseTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: "Montserrat_600SemiBold",
+    color: "#1F2937",
   },
   editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  exerciseDescription: {
+    fontSize: 13,
+    fontFamily: "Montserrat_400Regular",
+    color: "#6B7280",
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  bodyPartBadge: {
+    backgroundColor: "#FFF7ED",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  bodyPartText: {
+    fontSize: 11,
+    fontFamily: "Montserrat_500Medium",
+    color: "#FB923C",
+    textTransform: "capitalize",
+  },
+  typeBadge: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  typeText: {
+    fontSize: 11,
+    fontFamily: "Montserrat_500Medium",
+    color: "#4B5563",
+    textTransform: "capitalize",
+  },
+  difficultyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  difficultyText: {
+    fontSize: 11,
+    fontFamily: "Montserrat_500Medium",
+    color: "#FFFFFF",
+    textTransform: "capitalize",
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: "Montserrat_600SemiBold",
+    color: "#FFFFFF",
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  filterSection: {
+    marginBottom: 20,
+  },
+  filterTitle: {
+    fontSize: 14,
+    fontFamily: "Montserrat_600SemiBold",
+    color: "#1F2937",
+    marginBottom: 10,
+  },
+  chipGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  filterChip: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  activeChip: {
+    backgroundColor: "#FB923C",
+    borderColor: "#FB923C",
+  },
+  chipText: {
+    fontSize: 12,
+    fontFamily: "Montserrat_500Medium",
+    color: "#6B7280",
+    textTransform: "capitalize",
+  },
+  activeChipText: {
+    color: "#FFFFFF",
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    padding: 16,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  clearButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearText: {
+    fontSize: 14,
+    fontFamily: "Montserrat_500Medium",
+    color: "#6B7280",
+  },
+  applyButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  applyGradient: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  applyText: {
+    fontSize: 14,
+    fontFamily: "Montserrat_600SemiBold",
+    color: "#FFFFFF",
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontFamily: "Montserrat_500Medium",
+    color: "#1F2937",
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    fontFamily: "Montserrat_400Regular",
+    backgroundColor: "#FFFFFF",
+    color: "#1F2937",
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: "top",
+  },
+  dropdownContainer: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+  },
+  dropdown: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+  },
+  dropdownText: {
+    fontSize: 14,
+    fontFamily: "Montserrat_400Regular",
+    color: "#1F2937",
+    textTransform: "capitalize",
+  },
+  dropdownMenu: {
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+    maxHeight: 150,
+  },
+  dropdownScroll: {
+    maxHeight: 150,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  lastDropdownItem: {
+    borderBottomWidth: 0,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    fontFamily: "Montserrat_400Regular",
+    color: "#374151",
+    textTransform: "capitalize",
+  },
+  selectedDropdownText: {
+    color: "#FB923C",
+    fontFamily: "Montserrat_500Medium",
+  },
+  // View Modal Styles
+  viewModalHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingTop: 20,
+  },
+  viewModalHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  viewModalTitleContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  viewModalBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  viewBodyPartBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+  },
+  viewBodyPartText: {
+    fontSize: 11,
+    fontFamily: "Montserrat_500Medium",
+    color: "#FFFFFF",
+    textTransform: "capitalize",
+  },
+  viewDifficultyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  viewDifficultyText: {
+    fontSize: 11,
+    fontFamily: "Montserrat_500Medium",
+    color: "#FFFFFF",
+    textTransform: "capitalize",
+  },
+  viewModalActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  viewEditButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  viewModalContent: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  viewModalScrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
+  },
+  viewCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  viewCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  viewCardTitle: {
+    fontSize: 16,
+    fontFamily: "Montserrat_600SemiBold",
+    color: "#1F2937",
+  },
+  viewTypeContainer: {
+    flexDirection: "row",
+  },
+  viewTypeBadge: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  viewTypeText: {
+    fontSize: 13,
+    fontFamily: "Montserrat_500Medium",
+    color: "#4B5563",
+    textTransform: "capitalize",
+  },
+  viewDescriptionText: {
+    fontSize: 14,
+    fontFamily: "Montserrat_400Regular",
+    color: "#4B5563",
+    lineHeight: 20,
+  },
+  viewEquipmentContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  viewEquipmentChip: {
+    backgroundColor: "#FFF7ED",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FB923C",
+  },
+  viewEquipmentText: {
+    fontSize: 12,
+    fontFamily: "Montserrat_500Medium",
+    color: "#FB923C",
+    textTransform: "capitalize",
+  },
+  viewDetailsContainer: {
+    gap: 12,
+  },
+  viewDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  viewDetailLabel: {
+    fontSize: 13,
+    fontFamily: "Montserrat_500Medium",
+    color: "#6B7280",
+  },
+  viewDetailValue: {
+    fontSize: 13,
+    fontFamily: "Montserrat_400Regular",
+    color: "#1F2937",
+  },
+  viewActionCards: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  viewActionCard: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  viewActionCardGradient: {
+    padding: 16,
+    alignItems: "center",
+    gap: 8,
+  },
+  viewActionCardText: {
+    fontSize: 13,
+    fontFamily: "Montserrat_600SemiBold",
+    color: "#FFFFFF",
+  },
+  // Bottom Action Buttons
+  viewBottomActions: {
+    gap: 12,
+    paddingBottom: Spacing.md
+  },
+  viewActionButton: {
+    borderRadius: 16,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  viewActionButtonGradient: {
+    padding: 16,
+  },
+  viewActionButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  viewActionButtonIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  viewActionButtonTextContainer: {
+    flex: 1,
+  },
+  viewActionButtonTitle: {
+    fontSize: 16,
+    fontFamily: "Montserrat_600SemiBold",
+    color: "#FFFFFF",
+    marginBottom: 2,
+  },
+  viewActionButtonSubtitle: {
+    fontSize: 13,
+    fontFamily: "Montserrat_400Regular",
+    color: "rgba(255, 255, 255, 0.8)",
   },
 });
