@@ -1,9 +1,10 @@
 import { FadeInView } from "@/components/ui/AnimatedComponents";
 import { Spacing } from "@/constants/theme";
+import { ExerciseAPI, ExerciseFilters } from "@/api/exercise";
 import { BodyPart, Exercise, ExerciseType } from "@/types/gym";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -19,53 +20,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Mock data for now - will be replaced with actual storage later
-const mockExercises: Exercise[] = [
-  {
-    id: "1",
-    name: "Bench Press",
-    bodyPart: "chest",
-    type: "compound",
-    description:
-      "A compound exercise that primarily targets the chest, shoulders, and triceps.",
-    difficulty: "intermediate",
-    equipment: ["barbell", "bench"],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    name: "Pull-ups",
-    bodyPart: "back",
-    type: "compound",
-    description:
-      "A bodyweight exercise that targets the back muscles and biceps.",
-    difficulty: "intermediate",
-    equipment: ["pull-up bar"],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "3",
-    name: "Running",
-    bodyPart: "full-body",
-    type: "cardio",
-    description: "Cardiovascular exercise for endurance and fat burning.",
-    difficulty: "beginner",
-    equipment: ["treadmill"],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+// API-based exercise management
 
 const { width, height } = Dimensions.get("window");
 
 export default function ExercisesScreen() {
-  const [exercises, setExercises] = useState<Exercise[]>(mockExercises);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | "all">(
-    "all"
-  );
+  const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | "all">("all");
   const [selectedType, setSelectedType] = useState<ExerciseType | "all">("all");
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -73,6 +37,82 @@ export default function ExercisesScreen() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [viewingExercise, setViewingExercise] = useState<Exercise | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  // Load exercises from API
+  const loadExercises = useCallback(async (page: number = 1, append: boolean = false) => {
+    try {
+      if (!append) {
+        setLoading(true);
+      }
+
+      const filters: ExerciseFilters = {
+        bodyPart: selectedBodyPart,
+        exerciseType: selectedType,
+        search: searchQuery || undefined,
+        page,
+        limit: 20,
+      };
+
+      const response = await ExerciseAPI.getExercises(filters);
+      
+      if (append) {
+        setExercises(prev => [...prev, ...response.exercises]);
+      } else {
+        setExercises(response.exercises);
+      }
+      
+      setCurrentPage(response.pagination.page);
+      setTotalPages(response.pagination.totalPages);
+      setHasMore(response.pagination.page < response.pagination.totalPages);
+      
+    } catch (error) {
+      console.error('Error loading exercises:', error);
+      Alert.alert(
+        'Error',
+        'Failed to load exercises. Please check your connection and try again.'
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [selectedBodyPart, selectedType, searchQuery]);
+
+  // Refresh exercises
+  const refreshExercises = useCallback(async () => {
+    setRefreshing(true);
+    setCurrentPage(1);
+    await loadExercises(1, false);
+  }, [loadExercises]);
+
+  // Load more exercises (pagination)
+  const loadMoreExercises = useCallback(async () => {
+    if (hasMore && !loading) {
+      await loadExercises(currentPage + 1, true);
+    }
+  }, [hasMore, loading, currentPage, loadExercises]);
+
+  // Initial load and when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    loadExercises(1, false);
+  }, [selectedBodyPart, selectedType, searchQuery]);
+
+  // Debounced search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery !== undefined) {
+        setCurrentPage(1);
+        loadExercises(1, false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Dropdown states for add exercise modal
   const [showBodyPartDropdown, setShowBodyPartDropdown] = useState(false);
@@ -108,17 +148,8 @@ export default function ExercisesScreen() {
     equipment: "",
   });
 
-  const filteredExercises = exercises.filter((exercise) => {
-    const matchesSearch =
-      exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exercise.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesBodyPart =
-      selectedBodyPart === "all" || exercise.bodyPart === selectedBodyPart;
-    const matchesType =
-      selectedType === "all" || exercise.type === selectedType;
-
-    return matchesSearch && matchesBodyPart && matchesType;
-  });
+  // Exercises are already filtered by the API
+  const filteredExercises = exercises;
 
   const handleExercisePress = (exerciseId: string) => {
     const exercise = exercises.find((ex) => ex.id === exerciseId);
@@ -160,56 +191,88 @@ export default function ExercisesScreen() {
     setShowEditDifficultyDropdown(false);
   };
 
-  const handleAddExercise = () => {
-    const exercise: Exercise = {
-      id: Date.now().toString(),
-      name: newExercise.name,
-      bodyPart: newExercise.bodyPart,
-      type: newExercise.type,
-      description: newExercise.description,
-      difficulty: newExercise.difficulty,
-      equipment: newExercise.equipment.split(",").map((e) => e.trim()),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+  const handleAddExercise = async () => {
+    if (!newExercise.name.trim()) {
+      Alert.alert("Error", "Exercise name is required.");
+      return;
+    }
 
-    setExercises([...exercises, exercise]);
-    setNewExercise({
-      name: "",
-      bodyPart: "chest",
-      type: "compound",
-      description: "",
-      difficulty: "beginner",
-      equipment: "",
-    });
-    setShowAddModal(false);
-    Alert.alert("Success", "Exercise added successfully!");
+    try {
+      setLoading(true);
+      
+      const exerciseData: Omit<Exercise, 'createdAt' | 'updatedAt'> = {
+        id: `ex_${Date.now()}`,
+        name: newExercise.name.trim(),
+        bodyPart: newExercise.bodyPart,
+        type: newExercise.type,
+        description: newExercise.description.trim(),
+        difficulty: newExercise.difficulty,
+        equipment: newExercise.equipment ? newExercise.equipment.split(",").map((e) => e.trim()).filter(e => e) : [],
+      };
+
+      await ExerciseAPI.createExercise(exerciseData);
+      
+      // Reset form
+      setNewExercise({
+        name: "",
+        bodyPart: "chest",
+        type: "compound",
+        description: "",
+        difficulty: "beginner",
+        equipment: "",
+      });
+      
+      setShowAddModal(false);
+      closeAllDropdowns();
+      
+      // Refresh exercises list
+      await refreshExercises();
+      
+      Alert.alert("Success", "Exercise added successfully!");
+      
+    } catch (error) {
+      console.error('Error adding exercise:', error);
+      Alert.alert("Error", "Failed to add exercise. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleUpdateExercise = () => {
-    if (!editingExercise) return;
+  const handleUpdateExercise = async () => {
+    if (!editingExercise || !editExercise.name.trim()) {
+      Alert.alert("Error", "Exercise name is required.");
+      return;
+    }
 
-    const updatedExercise: Exercise = {
-      ...editingExercise,
-      name: editExercise.name,
-      bodyPart: editExercise.bodyPart,
-      type: editExercise.type,
-      description: editExercise.description,
-      difficulty: editExercise.difficulty,
-      equipment: editExercise.equipment.split(",").map((e) => e.trim()),
-      updatedAt: new Date(),
-    };
+    try {
+      setLoading(true);
 
-    setExercises(
-      exercises.map((ex) =>
-        ex.id === editingExercise.id ? updatedExercise : ex
-      )
-    );
+      const updates = {
+        name: editExercise.name.trim(),
+        bodyPart: editExercise.bodyPart,
+        type: editExercise.type,
+        description: editExercise.description.trim(),
+        difficulty: editExercise.difficulty,
+        equipment: editExercise.equipment ? editExercise.equipment.split(",").map((e) => e.trim()).filter(e => e) : [],
+      };
 
-    setShowEditModal(false);
-    setEditingExercise(null);
-    closeAllEditDropdowns();
-    Alert.alert("Success", "Exercise updated successfully!");
+      await ExerciseAPI.updateExercise(editingExercise.id, updates);
+
+      setShowEditModal(false);
+      setEditingExercise(null);
+      closeAllEditDropdowns();
+      
+      // Refresh exercises list
+      await refreshExercises();
+      
+      Alert.alert("Success", "Exercise updated successfully!");
+      
+    } catch (error) {
+      console.error('Error updating exercise:', error);
+      Alert.alert("Error", "Failed to update exercise. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const clearFilters = () => {
@@ -414,9 +477,51 @@ export default function ExercisesScreen() {
         data={filteredExercises}
         keyExtractor={(item) => item.id}
         renderItem={renderExerciseItem}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[
+          styles.listContainer,
+          filteredExercises.length === 0 && styles.emptyListContainer
+        ]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
+        refreshing={refreshing}
+        onRefresh={refreshExercises}
+        onEndReached={loadMoreExercises}
+        onEndReachedThreshold={0.1}
+        ListEmptyComponent={() => (
+          !loading ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="fitness" size={64} color="#9CA3AF" />
+              <Text style={styles.emptyTitle}>No Exercises Found</Text>
+              <Text style={styles.emptySubtitle}>
+                {searchQuery || selectedBodyPart !== 'all' || selectedType !== 'all'
+                  ? 'Try adjusting your filters or search terms'
+                  : 'Start by adding your first exercise'
+                }
+              </Text>
+              {(!searchQuery && selectedBodyPart === 'all' && selectedType === 'all') && (
+                <TouchableOpacity
+                  style={styles.emptyActionButton}
+                  onPress={handleAddPress}
+                >
+                  <LinearGradient
+                    colors={['#FB923C', '#F97316']}
+                    style={styles.emptyActionGradient}
+                  >
+                    <Ionicons name="add" size={20} color="#FFFFFF" />
+                    <Text style={styles.emptyActionText}>Add Exercise</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : null
+        )}
+        ListFooterComponent={() => (
+          loading && exercises.length > 0 ? (
+            <View style={styles.loadingFooter}>
+              <Text style={styles.loadingText}>Loading more exercises...</Text>
+            </View>
+          ) : null
+        )}
       />
 
       {/* Filters Modal */}
@@ -1907,5 +2012,57 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Montserrat_400Regular",
     color: "rgba(255, 255, 255, 0.8)",
+  },
+  // Empty state and loading styles
+  emptyListContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    paddingVertical: 64,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontFamily: "Montserrat_600SemiBold",
+    color: "#1F2937",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    fontFamily: "Montserrat_400Regular",
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  emptyActionButton: {
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  emptyActionGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  emptyActionText: {
+    fontSize: 14,
+    fontFamily: "Montserrat_600SemiBold",
+    color: "#FFFFFF",
+  },
+  loadingFooter: {
+    padding: 20,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+    fontFamily: "Montserrat_400Regular",
+    color: "#6B7280",
   },
 });
