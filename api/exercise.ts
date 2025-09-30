@@ -1,7 +1,8 @@
 import { BodyPart, Exercise, ExerciseType } from '@/types/gym';
 
 // API Configuration
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:3000';
+// Use 10.0.2.2 for Android emulator, localhost for iOS simulator, or your actual IP for physical devices
+const API_BASE_URL = 'http://192.168.0.101:8000'
 
 // API Response Types
 export interface ApiResponse<T> {
@@ -49,25 +50,64 @@ export interface ExercisesByBodyPart {
 
 // Helper function to handle API responses
 async function handleApiResponse<T>(response: Response): Promise<T> {
+  console.log('API Response status:', response.status);
+  console.log('API Response headers:', response.headers);
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP Error: ${response.status}`);
+    console.error('API Error response:', errorData);
   }
-  
+
   const data = await response.json();
-  return data;
+  console.log('API Response data:', data);
+  return data?.data;
 }
 
 // Exercise API Service
 export class ExerciseAPI {
-  
+
+  // Test API connection
+  static async healthCheck(): Promise<boolean> {
+    try {
+      console.log('Testing API connection to:', `${API_BASE_URL}/health`);
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        method: 'GET',
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+      console.log('Health check response status:', response);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Health check successful:', data);
+        return true;
+      } else {
+        console.error('Health check failed:', response.status);
+        return false;
+      }
+    } catch (error) {
+      console.error('Health check error:', error);
+      return false;
+    }
+  }
+
   // Create a new exercise
   static async createExercise(exercise: Omit<Exercise, 'createdAt' | 'updatedAt'>): Promise<Exercise> {
     try {
-      const response = await fetch(`${API_BASE_URL}/exercises`, {
+      const response = await fetch(`${API_BASE_URL}/api/exercises`, {
         method: 'POST',
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
           id: exercise.id,
@@ -92,38 +132,49 @@ export class ExerciseAPI {
   static async getExercises(filters: ExerciseFilters = {}): Promise<ExerciseListResponse> {
     try {
       const params = new URLSearchParams();
-      
+
       if (filters.bodyPart && filters.bodyPart !== 'all') {
         params.append('body_part', filters.bodyPart);
       }
-      
+
       if (filters.exerciseType && filters.exerciseType !== 'all') {
         params.append('exercise_type', filters.exerciseType);
       }
-      
+
       if (filters.difficulty && filters.difficulty !== 'all') {
         params.append('difficulty', filters.difficulty);
       }
-      
+
       if (filters.search) {
         params.append('search', filters.search);
       }
-      
+
       if (filters.page) {
         params.append('page', filters.page.toString());
       }
-      
+
       if (filters.limit) {
         params.append('limit', filters.limit.toString());
       }
 
-      const url = `${API_BASE_URL}/exercises${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await fetch(url);
+      const url = `${API_BASE_URL}/api/exercises`;
+      console.log('Fetching exercises from URL:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
 
       const data = await handleApiResponse<ExerciseListResponse>(response);
-      
+
       // Transform API response to match our Exercise interface
-      const transformedExercises = data.exercises.map(exercise => ({
+      const transformedExercises = data?.map(exercise => ({
         ...exercise,
         bodyPart: (exercise as any).body_part,
         type: (exercise as any).exercise_type,
@@ -144,7 +195,16 @@ export class ExerciseAPI {
   // Get exercise constants
   static async getConstants(): Promise<ExerciseConstants> {
     try {
-      const response = await fetch(`${API_BASE_URL}/exercises/constants`);
+      const response = await fetch(`${API_BASE_URL}/exercises/constants`, {
+        method: 'GET',
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
       const data = await handleApiResponse<ExerciseConstants>(response);
       return data;
     } catch (error) {
@@ -160,7 +220,16 @@ export class ExerciseAPI {
     difficulties: ('beginner' | 'intermediate' | 'advanced')[];
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/exercises/filters`);
+      const response = await fetch(`${API_BASE_URL}/exercises/filters`, {
+        method: 'GET',
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
       const data = await handleApiResponse<{
         bodyParts: BodyPart[];
         exerciseTypes: ExerciseType[];
@@ -176,7 +245,16 @@ export class ExerciseAPI {
   // Get exercise statistics
   static async getStats(): Promise<ExerciseStats> {
     try {
-      const response = await fetch(`${API_BASE_URL}/exercises/stats`);
+      const response = await fetch(`${API_BASE_URL}/exercises/stats`, {
+        method: 'GET',
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
       const data = await handleApiResponse<ExerciseStats>(response);
       return data;
     } catch (error) {
@@ -188,9 +266,18 @@ export class ExerciseAPI {
   // Get exercises grouped by body part
   static async getExercisesByBodyPart(): Promise<ExercisesByBodyPart> {
     try {
-      const response = await fetch(`${API_BASE_URL}/exercises/by-body-part`);
+      const response = await fetch(`${API_BASE_URL}/exercises/by-body-part`, {
+        method: 'GET',
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
       const data = await handleApiResponse<ExercisesByBodyPart>(response);
-      
+
       // Transform the exercises in each body part group
       const transformedData: ExercisesByBodyPart = {};
       Object.keys(data).forEach(bodyPart => {
@@ -202,7 +289,7 @@ export class ExerciseAPI {
           updatedAt: new Date((exercise as any).updated_at),
         }));
       });
-      
+
       return transformedData;
     } catch (error) {
       console.error('Error fetching exercises by body part:', error);
@@ -213,9 +300,18 @@ export class ExerciseAPI {
   // Get specific exercise by ID
   static async getExercise(id: string): Promise<Exercise> {
     try {
-      const response = await fetch(`${API_BASE_URL}/exercises/${id}`);
+      const response = await fetch(`${API_BASE_URL}/exercises/${id}`, {
+        method: 'GET',
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
       const data = await handleApiResponse<{ exercise: Exercise }>(response);
-      
+
       // Transform API response to match our Exercise interface
       const exercise = data.exercise;
       return {
@@ -236,8 +332,12 @@ export class ExerciseAPI {
     try {
       const response = await fetch(`${API_BASE_URL}/exercises/${id}`, {
         method: 'PUT',
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
           name: updates.name,
@@ -250,7 +350,7 @@ export class ExerciseAPI {
       });
 
       const data = await handleApiResponse<{ exercise: Exercise }>(response);
-      
+
       // Transform API response to match our Exercise interface
       const exercise = data.exercise;
       return {
@@ -271,6 +371,13 @@ export class ExerciseAPI {
     try {
       const response = await fetch(`${API_BASE_URL}/exercises/${id}`, {
         method: 'DELETE',
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
       });
 
       if (!response.ok) {

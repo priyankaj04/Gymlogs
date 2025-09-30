@@ -1,6 +1,6 @@
+import { ExerciseAPI, ExerciseFilters } from "@/api/exercise";
 import { FadeInView } from "@/components/ui/AnimatedComponents";
 import { Spacing } from "@/constants/theme";
-import { ExerciseAPI, ExerciseFilters } from "@/api/exercise";
 import { BodyPart, Exercise, ExerciseType } from "@/types/gym";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -54,8 +54,6 @@ export default function ExercisesScreen() {
         bodyPart: selectedBodyPart,
         exerciseType: selectedType,
         search: searchQuery || undefined,
-        page,
-        limit: 20,
       };
 
       const response = await ExerciseAPI.getExercises(filters);
@@ -66,9 +64,6 @@ export default function ExercisesScreen() {
         setExercises(response.exercises);
       }
       
-      setCurrentPage(response.pagination.page);
-      setTotalPages(response.pagination.totalPages);
-      setHasMore(response.pagination.page < response.pagination.totalPages);
       
     } catch (error) {
       console.error('Error loading exercises:', error);
@@ -483,9 +478,6 @@ export default function ExercisesScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        refreshing={refreshing}
-        onRefresh={refreshExercises}
-        onEndReached={loadMoreExercises}
         onEndReachedThreshold={0.1}
         ListEmptyComponent={() => (
           !loading ? (
