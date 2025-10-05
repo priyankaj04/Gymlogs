@@ -6,9 +6,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
+  Image,
   Modal,
   ScrollView,
   StatusBar,
@@ -28,6 +30,8 @@ export default function ExercisesScreen() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [addingExercise, setAddingExercise] = useState(false);
+  const [updatingExercise, setUpdatingExercise] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | "all">("all");
   const [selectedType, setSelectedType] = useState<ExerciseType | "all">("all");
@@ -193,7 +197,7 @@ export default function ExercisesScreen() {
     }
 
     try {
-      setLoading(true);
+      setAddingExercise(true);
       
       const exerciseData: Omit<Exercise, 'createdAt' | 'updatedAt'> = {
         id: `ex_${Date.now()}`,
@@ -229,7 +233,7 @@ export default function ExercisesScreen() {
       console.error('Error adding exercise:', error);
       Alert.alert("Error", "Failed to add exercise. Please try again.");
     } finally {
-      setLoading(false);
+      setAddingExercise(false);
     }
   };
 
@@ -240,7 +244,7 @@ export default function ExercisesScreen() {
     }
 
     try {
-      setLoading(true);
+      setUpdatingExercise(true);
 
       const updates = {
         name: editExercise.name.trim(),
@@ -266,7 +270,7 @@ export default function ExercisesScreen() {
       console.error('Error updating exercise:', error);
       Alert.alert("Error", "Failed to update exercise. Please try again.");
     } finally {
-      setLoading(false);
+      setUpdatingExercise(false);
     }
   };
 
@@ -295,21 +299,21 @@ export default function ExercisesScreen() {
     }
   };
 
-  const getBodyPartIcon = (bodyPart: string) => {
-    const iconMap: { [key: string]: string } = {
-      chest: "fitness",
-      back: "body",
-      shoulders: "barbell",
-      biceps: "fitness",
-      triceps: "fitness",
-      legs: "walk",
-      glutes: "body",
-      core: "body",
-      calves: "walk",
-      forearms: "fitness",
-      "full-body": "body",
+  const getBodyPartImage = (bodyPart: string) => {
+    const imageMap: { [key: string]: any } = {
+      chest: require("@/assets/images/bodyparts/chest.webp"),
+      back: require("@/assets/images/bodyparts/lowerback.webp"),
+      shoulders: require("@/assets/images/bodyparts/sholders.webp"),
+      biceps: require("@/assets/images/bodyparts/biceps.webp"),
+      triceps: require("@/assets/images/bodyparts/triceps.webp"),
+      legs: require("@/assets/images/bodyparts/quads.webp"),
+      glutes: require("@/assets/images/bodyparts/glutes.webp"),
+      core: require("@/assets/images/bodyparts/abs.webp"),
+      calves: require("@/assets/images/bodyparts/calves.webp"),
+      forearms: require("@/assets/images/bodyparts/forearms.webp"),
+      "full-body": require("@/assets/images/bodyparts/abs.webp"),
     };
-    return iconMap[bodyPart] || "fitness";
+    return imageMap[bodyPart] || require("@/assets/images/bodyparts/chest.webp");
   };
 
   const formatDate = (date: Date) => {
@@ -339,16 +343,13 @@ export default function ExercisesScreen() {
         >
           <View style={styles.exerciseHeader}>
             <View style={styles.iconContainer}>
-              <LinearGradient
-                colors={["#FB923C", "#F97316"]}
-                style={styles.iconGradient}
-              >
-                <Ionicons
-                  name={getBodyPartIcon(item.bodyPart) as any}
-                  size={18}
-                  color="#FFFFFF"
+              <View style={styles.imageContainer}>
+                <Image
+                  source={getBodyPartImage(item.bodyPart)}
+                  style={styles.bodyPartImage}
+                  resizeMode="cover"
                 />
-              </LinearGradient>
+              </View>
             </View>
 
             <View style={styles.exerciseContent}>
@@ -479,6 +480,8 @@ export default function ExercisesScreen() {
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         onEndReachedThreshold={0.1}
+        refreshing={refreshing}
+        onRefresh={refreshExercises}
         ListEmptyComponent={() => (
           !loading ? (
             <View style={styles.emptyContainer}>
@@ -510,6 +513,7 @@ export default function ExercisesScreen() {
         ListFooterComponent={() => (
           loading && exercises.length > 0 ? (
             <View style={styles.loadingFooter}>
+              <ActivityIndicator size="small" color="#FB923C" />
               <Text style={styles.loadingText}>Loading more exercises...</Text>
             </View>
           ) : null
@@ -883,17 +887,24 @@ export default function ExercisesScreen() {
             <TouchableOpacity
               onPress={handleAddExercise}
               style={styles.applyButton}
-              disabled={!newExercise.name.trim()}
+              disabled={!newExercise.name.trim() || addingExercise}
             >
               <LinearGradient
                 colors={
-                  !newExercise.name.trim()
+                  !newExercise.name.trim() || addingExercise
                     ? ["#9CA3AF", "#6B7280"]
                     : ["#FB923C", "#F97316"]
                 }
                 style={styles.applyGradient}
               >
-                <Text style={styles.applyText}>Add</Text>
+                {addingExercise ? (
+                  <View style={styles.loadingButtonContent}>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Text style={styles.applyText}>Adding...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.applyText}>Add</Text>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -1182,17 +1193,24 @@ export default function ExercisesScreen() {
             <TouchableOpacity
               onPress={handleUpdateExercise}
               style={styles.applyButton}
-              disabled={!editExercise.name.trim()}
+              disabled={!editExercise.name.trim() || updatingExercise}
             >
               <LinearGradient
                 colors={
-                  !editExercise.name.trim()
+                  !editExercise.name.trim() || updatingExercise
                     ? ["#9CA3AF", "#6B7280"]
                     : ["#FB923C", "#F97316"]
                 }
                 style={styles.applyGradient}
               >
-                <Text style={styles.applyText}>Update</Text>
+                {updatingExercise ? (
+                  <View style={styles.loadingButtonContent}>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Text style={styles.applyText}>Updating...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.applyText}>Update</Text>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -1215,12 +1233,10 @@ export default function ExercisesScreen() {
                 <Text style={styles.modalTitle}>{viewingExercise?.name}</Text>
                 <View style={styles.viewModalBadgeRow}>
                   <View style={styles.viewBodyPartBadge}>
-                    <Ionicons
-                      name={
-                        getBodyPartIcon(viewingExercise?.bodyPart || "") as any
-                      }
-                      size={12}
-                      color="#FFFFFF"
+                    <Image
+                      source={getBodyPartImage(viewingExercise?.bodyPart || "")}
+                      style={styles.viewBodyPartImage}
+                      resizeMode="cover"
                     />
                     <Text style={styles.viewBodyPartText}>
                       {viewingExercise?.bodyPart}
@@ -1425,6 +1441,16 @@ export default function ExercisesScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {/* Loading Overlay */}
+      {loading && exercises.length === 0 && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FB923C" />
+            <Text style={styles.loadingOverlayText}>Loading exercises...</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -2051,10 +2077,67 @@ const styles = StyleSheet.create({
   loadingFooter: {
     padding: 20,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
   },
   loadingText: {
     fontSize: 14,
     fontFamily: "Montserrat_400Regular",
     color: "#6B7280",
+  },
+  // Loading overlay styles
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(248, 250, 252, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  loadingContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    gap: 12,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  loadingOverlayText: {
+    fontSize: 16,
+    fontFamily: "Montserrat_500Medium",
+    color: "#1F2937",
+  },
+  loadingButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  // Body part image styles
+  imageContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#FB923C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bodyPartImage: {
+    width: 24,
+    height: 24,
+    tintColor: "#FFFFFF",
+  },
+  viewBodyPartImage: {
+    width: 12,
+    height: 12,
+    tintColor: "#FFFFFF",
   },
 });
