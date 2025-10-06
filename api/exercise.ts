@@ -2,7 +2,7 @@ import { BodyPart, Exercise, ExerciseType } from '@/types/gym';
 
 // API Configuration
 // Use 10.0.2.2 for Android emulator, localhost for iOS simulator, or your actual IP for physical devices
-const API_BASE_URL = 'http://192.168.0.101:8000'
+const API_BASE_URL = process.env.EXPO_PUBLIC_BASEURL || 'http://localhost:3000';
 
 // API Response Types
 export interface ApiResponse<T> {

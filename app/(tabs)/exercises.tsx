@@ -33,7 +33,9 @@ export default function ExercisesScreen() {
   const [addingExercise, setAddingExercise] = useState(false);
   const [updatingExercise, setUpdatingExercise] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | "all">("all");
+  const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | "all">(
+    "all"
+  );
   const [selectedType, setSelectedType] = useState<ExerciseType | "all">("all");
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -41,45 +43,46 @@ export default function ExercisesScreen() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [viewingExercise, setViewingExercise] = useState<Exercise | null>(null);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
   // Load exercises from API
-  const loadExercises = useCallback(async (page: number = 1, append: boolean = false) => {
-    try {
-      if (!append) {
-        setLoading(true);
-      }
+  const loadExercises = useCallback(
+    async (page: number = 1, append: boolean = false) => {
+      try {
+        if (!append) {
+          setLoading(true);
+        }
 
-      const filters: ExerciseFilters = {
-        bodyPart: selectedBodyPart,
-        exerciseType: selectedType,
-        search: searchQuery || undefined,
-      };
+        const filters: ExerciseFilters = {
+          bodyPart: selectedBodyPart,
+          exerciseType: selectedType,
+          search: searchQuery || undefined,
+        };
 
-      const response = await ExerciseAPI.getExercises(filters);
-      
-      if (append) {
-        setExercises(prev => [...prev, ...response.exercises]);
-      } else {
-        setExercises(response.exercises);
+        const response = await ExerciseAPI.getExercises(filters);
+
+        if (append) {
+          setExercises((prev) => [...prev, ...response.exercises]);
+        } else {
+          setExercises(response.exercises);
+        }
+      } catch (error) {
+        console.error("Error loading exercises:", error);
+        Alert.alert(
+          "Error",
+          "Failed to load exercises. Please check your connection and try again."
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-      
-      
-    } catch (error) {
-      console.error('Error loading exercises:', error);
-      Alert.alert(
-        'Error',
-        'Failed to load exercises. Please check your connection and try again.'
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [selectedBodyPart, selectedType, searchQuery]);
+    },
+    [selectedBodyPart, selectedType, searchQuery]
+  );
 
   // Refresh exercises
   const refreshExercises = useCallback(async () => {
@@ -198,19 +201,24 @@ export default function ExercisesScreen() {
 
     try {
       setAddingExercise(true);
-      
-      const exerciseData: Omit<Exercise, 'createdAt' | 'updatedAt'> = {
+
+      const exerciseData: Omit<Exercise, "createdAt" | "updatedAt"> = {
         id: `ex_${Date.now()}`,
         name: newExercise.name.trim(),
         bodyPart: newExercise.bodyPart,
         type: newExercise.type,
         description: newExercise.description.trim(),
         difficulty: newExercise.difficulty,
-        equipment: newExercise.equipment ? newExercise.equipment.split(",").map((e) => e.trim()).filter(e => e) : [],
+        equipment: newExercise.equipment
+          ? newExercise.equipment
+              .split(",")
+              .map((e) => e.trim())
+              .filter((e) => e)
+          : [],
       };
 
       await ExerciseAPI.createExercise(exerciseData);
-      
+
       // Reset form
       setNewExercise({
         name: "",
@@ -220,17 +228,16 @@ export default function ExercisesScreen() {
         difficulty: "beginner",
         equipment: "",
       });
-      
+
       setShowAddModal(false);
       closeAllDropdowns();
-      
+
       // Refresh exercises list
       await refreshExercises();
-      
+
       Alert.alert("Success", "Exercise added successfully!");
-      
     } catch (error) {
-      console.error('Error adding exercise:', error);
+      console.error("Error adding exercise:", error);
       Alert.alert("Error", "Failed to add exercise. Please try again.");
     } finally {
       setAddingExercise(false);
@@ -252,7 +259,12 @@ export default function ExercisesScreen() {
         type: editExercise.type,
         description: editExercise.description.trim(),
         difficulty: editExercise.difficulty,
-        equipment: editExercise.equipment ? editExercise.equipment.split(",").map((e) => e.trim()).filter(e => e) : [],
+        equipment: editExercise.equipment
+          ? editExercise.equipment
+              .split(",")
+              .map((e) => e.trim())
+              .filter((e) => e)
+          : [],
       };
 
       await ExerciseAPI.updateExercise(editingExercise.id, updates);
@@ -260,14 +272,13 @@ export default function ExercisesScreen() {
       setShowEditModal(false);
       setEditingExercise(null);
       closeAllEditDropdowns();
-      
+
       // Refresh exercises list
       await refreshExercises();
-      
+
       Alert.alert("Success", "Exercise updated successfully!");
-      
     } catch (error) {
-      console.error('Error updating exercise:', error);
+      console.error("Error updating exercise:", error);
       Alert.alert("Error", "Failed to update exercise. Please try again.");
     } finally {
       setUpdatingExercise(false);
@@ -299,21 +310,40 @@ export default function ExercisesScreen() {
     }
   };
 
-  const getBodyPartImage = (bodyPart: string) => {
+  const getBodyPartImage = (bodyPart: string, type: string = '') => {
+
+    if(['cardio', 'calisthenics', 'endurance'].includes(type)){
+      const typeImageMap: { [key: string]: any } = {
+        cardio: require("@/assets/images/bodyparts/cardio.png"),
+        calisthenics: require("@/assets/images/bodyparts/calithenics.png"),
+        endurance: require("@/assets/images/bodyparts/endurance.png"),
+      }
+      return typeImageMap[type];
+    }
     const imageMap: { [key: string]: any } = {
-      chest: require("@/assets/images/bodyparts/chest.webp"),
-      back: require("@/assets/images/bodyparts/lowerback.webp"),
-      shoulders: require("@/assets/images/bodyparts/sholders.webp"),
-      biceps: require("@/assets/images/bodyparts/biceps.webp"),
-      triceps: require("@/assets/images/bodyparts/triceps.webp"),
-      legs: require("@/assets/images/bodyparts/quads.webp"),
-      glutes: require("@/assets/images/bodyparts/glutes.webp"),
-      core: require("@/assets/images/bodyparts/abs.webp"),
-      calves: require("@/assets/images/bodyparts/calves.webp"),
-      forearms: require("@/assets/images/bodyparts/forearms.webp"),
-      "full-body": require("@/assets/images/bodyparts/abs.webp"),
+      chest: require("@/assets/images/bodyparts/chest.png"),
+      lowerback: require("@/assets/images/bodyparts/lowerback.png"),
+      shoulders: require("@/assets/images/bodyparts/sholders.png"),
+      biceps: require("@/assets/images/bodyparts/biceps.png"),
+      triceps: require("@/assets/images/bodyparts/triceps.png"),
+      legs: require("@/assets/images/bodyparts/middlequads.png"),
+      glutes: require("@/assets/images/bodyparts/glutes.png"),
+      core: require("@/assets/images/bodyparts/abs.png"),
+      calves: require("@/assets/images/bodyparts/calves.png"),
+      forearms: require("@/assets/images/bodyparts/forearms.png"),
+      "full-body": require("@/assets/images/bodyparts/abs.png"),
+      upperabs: require("@/assets/images/bodyparts/upperabs.png"),
+      reardelts: require("@/assets/images/bodyparts/reardelts.png"),
+      lats: require("@/assets/images/bodyparts/lats.png"),
+      back: require("@/assets/images/bodyparts/lats.png"),
+      innerquads: require("@/assets/images/bodyparts/innerquads.png"),
+      traps: require("@/assets/images/bodyparts/traps.png"),
+      hamstrings: require("@/assets/images/bodyparts/hamstrings.png"),
+      frontcalves: require("@/assets/images/bodyparts/frontcalves.png"),
+      middlequads: require("@/assets/images/bodyparts/middlequads.png"),
+      sideabs: require("@/assets/images/bodyparts/sideabs.png"),
     };
-    return imageMap[bodyPart] || require("@/assets/images/bodyparts/chest.webp");
+    return imageMap[bodyPart] || require("@/assets/images/bodyparts/chest.png");
   };
 
   const formatDate = (date: Date) => {
@@ -345,7 +375,7 @@ export default function ExercisesScreen() {
             <View style={styles.iconContainer}>
               <View style={styles.imageContainer}>
                 <Image
-                  source={getBodyPartImage(item.bodyPart)}
+                  source={getBodyPartImage(item.bodyPart, item.type)}
                   style={styles.bodyPartImage}
                   resizeMode="cover"
                 />
@@ -394,15 +424,25 @@ export default function ExercisesScreen() {
   const bodyParts: (BodyPart | "all")[] = [
     "all",
     "chest",
+    "lowerback",
     "back",
     "shoulders",
+    "upperabs",
+    "sideabs",
     "biceps",
     "triceps",
     "legs",
+    "middlequads",
+    "innerquads",
+    "hamstrings",
     "glutes",
     "core",
     "calves",
+    "frontcalves",
     "forearms",
+    "lats",
+    "traps",
+    "reardelts",
     "full-body",
   ];
 
@@ -412,6 +452,8 @@ export default function ExercisesScreen() {
     "compound",
     "isolated",
     "mobility",
+    "calisthenics",
+    "endurance",
   ];
 
   const difficulties = ["beginner", "intermediate", "advanced"];
@@ -475,49 +517,52 @@ export default function ExercisesScreen() {
         renderItem={renderExerciseItem}
         contentContainerStyle={[
           styles.listContainer,
-          filteredExercises.length === 0 && styles.emptyListContainer
+          filteredExercises.length === 0 && styles.emptyListContainer,
         ]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         onEndReachedThreshold={0.1}
         refreshing={refreshing}
         onRefresh={refreshExercises}
-        ListEmptyComponent={() => (
+        ListEmptyComponent={() =>
           !loading ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="fitness" size={64} color="#9CA3AF" />
               <Text style={styles.emptyTitle}>No Exercises Found</Text>
               <Text style={styles.emptySubtitle}>
-                {searchQuery || selectedBodyPart !== 'all' || selectedType !== 'all'
-                  ? 'Try adjusting your filters or search terms'
-                  : 'Start by adding your first exercise'
-                }
+                {searchQuery ||
+                selectedBodyPart !== "all" ||
+                selectedType !== "all"
+                  ? "Try adjusting your filters or search terms"
+                  : "Start by adding your first exercise"}
               </Text>
-              {(!searchQuery && selectedBodyPart === 'all' && selectedType === 'all') && (
-                <TouchableOpacity
-                  style={styles.emptyActionButton}
-                  onPress={handleAddPress}
-                >
-                  <LinearGradient
-                    colors={['#FB923C', '#F97316']}
-                    style={styles.emptyActionGradient}
+              {!searchQuery &&
+                selectedBodyPart === "all" &&
+                selectedType === "all" && (
+                  <TouchableOpacity
+                    style={styles.emptyActionButton}
+                    onPress={handleAddPress}
                   >
-                    <Ionicons name="add" size={20} color="#FFFFFF" />
-                    <Text style={styles.emptyActionText}>Add Exercise</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              )}
+                    <LinearGradient
+                      colors={["#FB923C", "#F97316"]}
+                      style={styles.emptyActionGradient}
+                    >
+                      <Ionicons name="add" size={20} color="#FFFFFF" />
+                      <Text style={styles.emptyActionText}>Add Exercise</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
             </View>
           ) : null
-        )}
-        ListFooterComponent={() => (
+        }
+        ListFooterComponent={() =>
           loading && exercises.length > 0 ? (
             <View style={styles.loadingFooter}>
               <ActivityIndicator size="small" color="#FB923C" />
               <Text style={styles.loadingText}>Loading more exercises...</Text>
             </View>
           ) : null
-        )}
+        }
       />
 
       {/* Filters Modal */}
@@ -1824,9 +1869,9 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   viewModalHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
   },
   viewModalTitleContainer: {
     flex: 1,
@@ -1879,7 +1924,7 @@ const styles = StyleSheet.create({
   },
   viewModalContent: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   viewModalScrollContent: {
     paddingHorizontal: 16,
@@ -1990,7 +2035,7 @@ const styles = StyleSheet.create({
   // Bottom Action Buttons
   viewBottomActions: {
     gap: 12,
-    paddingBottom: Spacing.md
+    paddingBottom: Spacing.md,
   },
   viewActionButton: {
     borderRadius: 16,
@@ -2126,14 +2171,14 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "#FB923C",
     alignItems: "center",
     justifyContent: "center",
+    borderColor: "#0d0d0d0d",
+    borderWidth: 1,
   },
   bodyPartImage: {
-    width: 24,
-    height: 24,
-    tintColor: "#FFFFFF",
+    width: 32,
+    height: 32,
   },
   viewBodyPartImage: {
     width: 12,

@@ -1,16 +1,28 @@
-export type ExerciseType = 'cardio' | 'compound' | 'isolated' | 'mobility';
+export type ExerciseType = 'cardio' | 'compound' | 'isolated' | 'mobility' | 'calisthenics' | 'endurance';
 
+// ...existing code...
 export type BodyPart = 
-  | 'chest' 
-  | 'back' 
-  | 'shoulders' 
-  | 'biceps' 
-  | 'triceps' 
-  | 'legs' 
-  | 'glutes' 
-  | 'core' 
-  | 'calves' 
+  | 'chest'
+  | 'lowerback'
+  | 'back'
+  | 'shoulders'
+  | 'shoulders'
+  | 'upperabs'
+  | 'sideabs'
+  | 'biceps'
+  | 'triceps'
+  | 'legs'
+  | 'middlequads'
+  | 'innerquads'
+  | 'hamstrings'
+  | 'glutes'
+  | 'core'
+  | 'calves'
+  | 'frontcalves'
   | 'forearms'
+  | 'lats'
+  | 'traps'
+  | 'reardelts'
   | 'full-body';
 
 export interface Exercise {
