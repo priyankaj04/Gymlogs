@@ -1,4 +1,5 @@
 import { BodyPart, Exercise, ExerciseType } from '@/types/gym';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // API Configuration
 // Use 10.0.2.2 for Android emulator, localhost for iOS simulator, or your actual IP for physical devices
@@ -48,6 +49,21 @@ export interface ExercisesByBodyPart {
   [key: string]: Exercise[];
 }
 
+// Helper function to get auth headers
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const token = await AsyncStorage.getItem('auth_token');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+}
+
 // Helper function to handle API responses
 async function handleApiResponse<T>(response: Response): Promise<T> {
   console.log('API Response status:', response.status);
@@ -70,15 +86,14 @@ export class ExerciseAPI {
   static async healthCheck(): Promise<boolean> {
     try {
       console.log('Testing API connection to:', `${API_BASE_URL}/health`);
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${API_BASE_URL}/health`, {
         method: 'GET',
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
       });
 
       console.log('Health check response status:', response);
@@ -100,15 +115,14 @@ export class ExerciseAPI {
   // Create a new exercise
   static async createExercise(exercise: Omit<Exercise, 'createdAt' | 'updatedAt'>): Promise<Exercise> {
     try {
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${API_BASE_URL}/api/exercises`, {
         method: 'POST',
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           id: exercise.id,
           name: exercise.name,
@@ -159,32 +173,31 @@ export class ExerciseAPI {
 
       const url = `${API_BASE_URL}/api/exercises`;
       console.log('Fetching exercises from URL:', url);
+      
+      const headers = await getAuthHeaders();
 
       const response = await fetch(url, {
         method: 'GET',
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
       });
 
       const data = await handleApiResponse<ExerciseListResponse>(response);
 
       // Transform API response to match our Exercise interface
-      const transformedExercises = data?.map(exercise => ({
+      const transformedExercises = data.exercises?.map((exercise: any) => ({
         ...exercise,
-        bodyPart: (exercise as any).body_part,
-        type: (exercise as any).exercise_type,
-        createdAt: new Date((exercise as any).created_at),
-        updatedAt: new Date((exercise as any).updated_at),
+        bodyPart: exercise.body_part || exercise.bodyPart,
+        type: exercise.exercise_type || exercise.type,
+        createdAt: new Date(exercise.created_at || exercise.createdAt),
+        updatedAt: new Date(exercise.updated_at || exercise.updatedAt),
       }));
 
       return {
         ...data,
-        exercises: transformedExercises,
+        exercises: transformedExercises || [],
       };
     } catch (error) {
       console.error('Error fetching exercises:', error);
@@ -195,15 +208,14 @@ export class ExerciseAPI {
   // Get exercise constants
   static async getConstants(): Promise<ExerciseConstants> {
     try {
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${API_BASE_URL}/exercises/constants`, {
         method: 'GET',
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
       });
       const data = await handleApiResponse<ExerciseConstants>(response);
       return data;
@@ -220,15 +232,14 @@ export class ExerciseAPI {
     difficulties: ('beginner' | 'intermediate' | 'advanced')[];
   }> {
     try {
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${API_BASE_URL}/exercises/filters`, {
         method: 'GET',
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
       });
       const data = await handleApiResponse<{
         bodyParts: BodyPart[];
@@ -245,15 +256,14 @@ export class ExerciseAPI {
   // Get exercise statistics
   static async getStats(): Promise<ExerciseStats> {
     try {
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${API_BASE_URL}/exercises/stats`, {
         method: 'GET',
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
       });
       const data = await handleApiResponse<ExerciseStats>(response);
       return data;
@@ -266,15 +276,14 @@ export class ExerciseAPI {
   // Get exercises grouped by body part
   static async getExercisesByBodyPart(): Promise<ExercisesByBodyPart> {
     try {
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${API_BASE_URL}/exercises/by-body-part`, {
         method: 'GET',
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
       });
       const data = await handleApiResponse<ExercisesByBodyPart>(response);
 
@@ -300,15 +309,14 @@ export class ExerciseAPI {
   // Get specific exercise by ID
   static async getExercise(id: string): Promise<Exercise> {
     try {
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${API_BASE_URL}/exercises/${id}`, {
         method: 'GET',
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
       });
       const data = await handleApiResponse<{ exercise: Exercise }>(response);
 
@@ -330,15 +338,14 @@ export class ExerciseAPI {
   // Update exercise
   static async updateExercise(id: string, updates: Partial<Omit<Exercise, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Exercise> {
     try {
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${API_BASE_URL}/exercises/${id}`, {
         method: 'PUT',
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           name: updates.name,
           description: updates.description,
@@ -369,15 +376,14 @@ export class ExerciseAPI {
   // Delete exercise (if needed in the future)
   static async deleteExercise(id: string): Promise<void> {
     try {
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${API_BASE_URL}/exercises/${id}`, {
         method: 'DELETE',
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
       });
 
       if (!response.ok) {

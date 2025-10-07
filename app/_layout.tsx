@@ -1,7 +1,7 @@
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -10,7 +10,9 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
 
+import AuthWrapper from "@/components/AuthWrapper";
 import { FontAssets } from "@/constants/Fonts";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { GymProvider } from "@/contexts/GymContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
@@ -36,17 +38,21 @@ export default function RootLayout() {
   }
 
   return (
-    <GymProvider>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="modal"
-            options={{ presentation: "modal", title: "Modal" }}
-          />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </GymProvider>
+    <AuthProvider>
+      <GymProvider>
+        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          <AuthWrapper>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="modal"
+                options={{ presentation: "modal", title: "Modal" }}
+              />
+            </Stack>
+          </AuthWrapper>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </GymProvider>
+    </AuthProvider>
   );
 }
