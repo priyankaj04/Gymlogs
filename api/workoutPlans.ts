@@ -114,6 +114,7 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 
 // Transform API workout plan to app format
 function transformWorkoutPlan(apiPlan: any): WorkoutPlan {
+    console.log("apiPlan", apiPlan)
     return {
         id: apiPlan.id,
         name: apiPlan.name,
@@ -294,8 +295,9 @@ export class WorkoutPlansAPI {
                 headers: await getAuthHeaders(token),
             });
 
-            const data = await handleApiResponse<{ plan: any }>(response);
-            return transformWorkoutPlan(data.plan);
+            const data = await handleApiResponse<{ data: any }>(response);
+        
+            return transformWorkoutPlan(data.data);
         } catch (error) {
             console.error('Error fetching workout plan:', error);
             throw error;

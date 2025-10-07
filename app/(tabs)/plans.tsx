@@ -9,11 +9,13 @@ import { Typography } from '@/constants/Typography';
 import { WorkoutPlan } from '@/types/gym';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -23,6 +25,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function WorkoutPlansScreen() {
+  const router = useRouter();
+  
   // State management
   const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,10 +39,8 @@ export default function WorkoutPlansScreen() {
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<WorkoutPlan | null>(null);
-  const [viewingPlan, setViewingPlan] = useState<WorkoutPlan | null>(null);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -143,12 +145,10 @@ export default function WorkoutPlansScreen() {
   const filteredPlans = workoutPlans;
 
   const handlePlanPress = (planId: string) => {
-    const plan = workoutPlans.find((p) => p.id === planId);
-    if (plan) {
-      setViewingPlan(plan);
-      setShowViewModal(true);
-    }
+    router.push(`/workout-plan/${planId}`);
   };
+
+
 
   const handleEditPress = (planId: string) => {
     const plan = workoutPlans.find((p) => p.id === planId);
@@ -358,6 +358,7 @@ export default function WorkoutPlansScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
+      <StatusBar barStyle="light-content" backgroundColor="#FB923C" />
       <LinearGradient
         colors={["#FB923C", "#F97316"]}
         style={styles.headerGradient}
@@ -467,7 +468,7 @@ export default function WorkoutPlansScreen() {
         </View>
       )}
 
-      {/* TODO: Add modals for Add, Edit, View, and Filters */}
+      {/* TODO: Add modals for Add, Edit, and Filters */}
     </SafeAreaView>
   );
 }
