@@ -87,9 +87,9 @@ export default function WorkoutPlansScreen() {
       const response = await WorkoutPlansAPI.getWorkoutPlans(filters);
       
       if (append) {
-        setWorkoutPlans(prev => [...prev, ...response.plans]);
+        setWorkoutPlans(prev => [...prev, ...response.data]);
       } else {
-        setWorkoutPlans(response.plans);
+        setWorkoutPlans(response.data);
       }
       
       setCurrentPage(response.pagination.page);

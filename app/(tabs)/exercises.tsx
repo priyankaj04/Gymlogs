@@ -65,10 +65,12 @@ export default function ExercisesScreen() {
 
         const response = await ExerciseAPI.getExercises(filters);
 
+        console.log("response", response)
+
         if (append) {
-          setExercises((prev) => [...prev, ...response.exercises]);
+          setExercises((prev) => [...prev, ...response.data]);
         } else {
-          setExercises(response.exercises);
+          setExercises(response.data);
         }
       } catch (error) {
         console.error("Error loading exercises:", error);
@@ -471,7 +473,7 @@ export default function ExercisesScreen() {
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>Exercises</Text>
             <Text style={styles.headerCount}>
-              {filteredExercises.length} available
+              {filteredExercises?.length} available
             </Text>
           </View>
 
@@ -517,7 +519,7 @@ export default function ExercisesScreen() {
         renderItem={renderExerciseItem}
         contentContainerStyle={[
           styles.listContainer,
-          filteredExercises.length === 0 && styles.emptyListContainer,
+          filteredExercises?.length === 0 && styles.emptyListContainer,
         ]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}

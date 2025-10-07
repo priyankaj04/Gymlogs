@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS, getPlatformApiUrl } from './shared';
 
 // API Configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_BASEURL
+const API_BASE_URL = getPlatformApiUrl();
 
 // API Response Types
 export interface ApiResponse<T> {
@@ -42,11 +43,7 @@ export interface AuthResponse {
   message?: string;
 }
 
-// Storage keys
-const STORAGE_KEYS = {
-  TOKEN: '@gym_logs_token',
-  USER: '@gym_logs_user',
-};
+
 
 // Helper function to handle API responses
 async function handleApiResponse<T>(response: Response): Promise<T> {
@@ -187,6 +184,28 @@ export class AuthAPI {
       
       const user = JSON.parse(userStr);
       
+      // Return stored user immediately (optimistic authentication)
+      // The token validation can happen in background or on API calls
+      return user;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      await this.logout(); // Clear invalid data
+      return null;
+    }
+  }
+
+  // Validate current token with server (optional - can be called when needed)
+  static async validateToken(): Promise<boolean> {
+    try {
+      const token = await AsyncStorage.getItem(STORAGE_KEYS.TOKEN);
+      const userStr = await AsyncStorage.getItem(STORAGE_KEYS.USER);
+      
+      if (!token || !userStr) {
+        return false;
+      }
+      
+      const user = JSON.parse(userStr);
+      
       // Verify token is still valid by making a request
       const response = await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
         method: 'GET',
@@ -199,7 +218,7 @@ export class AuthAPI {
       if (!response.ok) {
         // Token is invalid, clear storage
         await this.logout();
-        return null;
+        return false;
       }
 
       const data = await handleApiResponse<{ user: any }>(response);
@@ -208,11 +227,11 @@ export class AuthAPI {
       // Update stored user data
       await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(transformedUser));
       
-      return transformedUser;
+      return true;
     } catch (error) {
-      console.error('Error getting current user:', error);
-      await this.logout(); // Clear invalid data
-      return null;
+      console.error('Error validating token:', error);
+      await this.logout();
+      return false;
     }
   }
 

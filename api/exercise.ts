@@ -1,9 +1,8 @@
 import { BodyPart, Exercise, ExerciseType } from '@/types/gym';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAuthHeaders, getPlatformApiUrl } from './shared';
 
 // API Configuration
-// Use 10.0.2.2 for Android emulator, localhost for iOS simulator, or your actual IP for physical devices
-const API_BASE_URL = process.env.EXPO_PUBLIC_BASEURL || 'http://localhost:3000';
+const API_BASE_URL = getPlatformApiUrl();
 
 // API Response Types
 export interface ApiResponse<T> {
@@ -14,13 +13,7 @@ export interface ApiResponse<T> {
 }
 
 export interface ExerciseListResponse {
-  exercises: Exercise[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  data: Exercise[];
 }
 
 export interface ExerciseFilters {
@@ -49,20 +42,7 @@ export interface ExercisesByBodyPart {
   [key: string]: Exercise[];
 }
 
-// Helper function to get auth headers
-async function getAuthHeaders(): Promise<HeadersInit> {
-  const token = await AsyncStorage.getItem('auth_token');
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  return headers;
-}
+
 
 // Helper function to handle API responses
 async function handleApiResponse<T>(response: Response): Promise<T> {
@@ -76,7 +56,7 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 
   const data = await response.json();
   console.log('API Response data:', data);
-  return data?.data;
+  return data;
 }
 
 // Exercise API Service
@@ -186,8 +166,10 @@ export class ExerciseAPI {
 
       const data = await handleApiResponse<ExerciseListResponse>(response);
 
+      console.log("data", data);
+
       // Transform API response to match our Exercise interface
-      const transformedExercises = data.exercises?.map((exercise: any) => ({
+      const transformedExercises = data.data?.map((exercise: any) => ({
         ...exercise,
         bodyPart: exercise.body_part || exercise.bodyPart,
         type: exercise.exercise_type || exercise.type,
@@ -197,7 +179,7 @@ export class ExerciseAPI {
 
       return {
         ...data,
-        exercises: transformedExercises || [],
+        data: transformedExercises || [],
       };
     } catch (error) {
       console.error('Error fetching exercises:', error);

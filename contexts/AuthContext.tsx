@@ -34,24 +34,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const checkAuthStatus = async () => {
+    console.log('🔐 AuthContext: Checking authentication status...');
     try {
       const currentUser = await AuthAPI.getCurrentUser();
-      setUser(currentUser);
+      if (currentUser) {
+        console.log('✅ AuthContext: User found in storage:', currentUser.email);
+        setUser(currentUser);
+      } else {
+        console.log('❌ AuthContext: No authenticated user found');
+        setUser(null);
+      }
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error('❌ AuthContext: Auth check error:', error);
       setUser(null);
     } finally {
       setIsLoading(false);
+      console.log('🔐 AuthContext: Authentication check complete');
     }
   };
 
   const login = async (email: string, password: string) => {
+    console.log('🔐 AuthContext: Logging in user:', email);
     const authResponse = await AuthAPI.login({ email, password });
+    console.log('✅ AuthContext: Login successful, setting user state');
     setUser(authResponse.data);
   };
 
   const register = async (name: string, email: string, password: string) => {
+    console.log('🔐 AuthContext: Registering user:', email);
     const authResponse = await AuthAPI.register({ name, email, password });
+    console.log('✅ AuthContext: Registration successful, setting user state');
     setUser(authResponse.data);
   };
 
@@ -70,6 +82,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Debug function to check authentication state
+  const debugAuth = async () => {
+    console.log('=== AUTH DEBUG ===');
+    console.log('User state:', user);
+    console.log('Is authenticated:', !!user);
+    console.log('Is loading:', isLoading);
+    
+    const hasToken = await AuthAPI.isAuthenticated();
+    console.log('Has stored token:', hasToken);
+    
+    const storedUser = await AuthAPI.getCurrentUser();
+    console.log('Stored user:', storedUser);
+    console.log('==================');
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
@@ -79,6 +106,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     refreshUser,
   };
+
+  // Add debug function call for development
+  if (__DEV__) {
+    // Make debugAuth available globally for testing
+    (global as any).debugAuth = debugAuth;
+  }
 
   return (
     <AuthContext.Provider value={value}>

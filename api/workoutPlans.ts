@@ -1,9 +1,8 @@
 import { Exercise, WorkoutPlan, WorkoutPlanExercise } from '@/types/gym';
-import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getPlatformApiUrl, getStoredToken } from './shared';
 
 // API Configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_BASEURL;
+const API_BASE_URL = getPlatformApiUrl();
 
 // API Response Types
 export interface ApiResponse<T> {
@@ -14,7 +13,7 @@ export interface ApiResponse<T> {
 }
 
 export interface WorkoutPlanListResponse {
-    plans: WorkoutPlan[];
+    data: WorkoutPlan[];
     pagination: {
         page: number;
         limit: number;
@@ -82,15 +81,7 @@ export interface UpdateWorkoutPlanExerciseRequest {
     orderIndex?: number;
 }
 
-// Helper function to get token from AsyncStorage
-async function getTokenFromStorage(): Promise<string | null> {
-    try {
-        return await AsyncStorage.getItem('authToken');
-    } catch (error) {
-        console.error('Error getting token from AsyncStorage:', error);
-        return null;
-    }
-}
+
 
 // Helper function to get authorization headers
 async function getAuthHeaders(token?: string): Promise<Record<string, string>> {
@@ -98,7 +89,7 @@ async function getAuthHeaders(token?: string): Promise<Record<string, string>> {
         'Content-Type': 'application/json',
     };
     
-    const authToken = token || await getTokenFromStorage();
+    const authToken = token || await getStoredToken();
     if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
     }
@@ -251,6 +242,10 @@ export class WorkoutPlansAPI {
                 params.append('limit', filters.limit.toString());
             }
 
+            const getToken =  await getAuthHeaders(token);
+
+            console.log('Auth Headers:', getToken);
+
             const url = `${API_BASE_URL}/api/workout-plans${params.toString() ? `?${params.toString()}` : ''}`;
             console.log('Fetching workout plans from URL:', url);
             
@@ -260,13 +255,14 @@ export class WorkoutPlansAPI {
             });
 
             const data = await handleApiResponse<WorkoutPlanListResponse>(response);
+            console.log('Raw workout plans data:', data);
             
             // Transform API response to match our WorkoutPlan interface
-            const transformedPlans = data.plans.map(transformWorkoutPlan);
+            const transformedPlans = data.data.map(transformWorkoutPlan);
 
             return {
                 ...data,
-                plans: transformedPlans,
+                data: transformedPlans,
             };
         } catch (error) {
             console.error('Error fetching workout plans:', error);
